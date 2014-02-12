@@ -1,0 +1,44 @@
+[DEPENDENCIES]
+
+You need the stage 2 kernal files "m_flash.*" that are shipped with the official Spansion (Fujitsu) FMC16LX programmer.
+You can download a free copy from www.spansion.com for example:
+http://www.spansion.com/JP/marketingdownloads/products/micom/tools/downloads/flash/pcw16lx-v01l27.zip
+
+Copy stage 2 files to folder 'kernal16/'.
+$ cp /c/Program\ Files\ \(x86\)/FUJITSU/FUJITSU\ FLASH\ MCU\ Programmer/FMC16LX/m_flash.* ./kernal16/
+
+Copy the CHIPDEF.INI file to 'chipdef16.ini' (lowercase) in the same folder as the executable.
+$ cp /c/Program\ Files\ \(x86\)/FUJITSU/FUJITSU\ FLASH\ MCU\ Programmer/FMC16LX/CHIPDEF.INI chipdef16.ini
+
+[BUILDING]
+
+Use GNU make to build the application.
+Compiles for Windows XP and up in MinGW, I use vanilla MSys + MinGW setup.
+Compiles with clang or gcc on most Linux/BSD platforms.
+
+First clean any old objects and compiled resources:
+$ make clean
+
+To clean better i.e. remove most temporary files and compiled resources:
+$ make mrproper
+
+To view what files will be built and linked:
+$ make info
+
+Then compile and link in one step:
+$ make
+
+For a verbose build output just define AT as an empty token at the command line. For example:
+$ make AT=
+
+To run the application and print out basic help:
+$ ./kuji16.exe -h
+
+Build the documentation into a HTML page (html/index.html):
+$ make doc
+
+To clean up everything in the source tree (before commit):
+$ make distclean
+
+To create a ZIP containing a freshly built executable and HTML documentation:
+$ make dist

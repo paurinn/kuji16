@@ -1,0 +1,2 @@
+v1.1 KS 09022014
+Added error return codes and verbosity to make this usable in an automated fashion.

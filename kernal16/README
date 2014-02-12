@@ -1,0 +1,5 @@
+Place here the files m_flash.* that are shipped with the Fujitsu FMC16LX programmer.
+You can download a free copy from www.spansion.com for example:
+http://www.spansion.com/JP/marketingdownloads/products/micom/tools/downloads/flash/pcw16lx-v01l27.zip
+
+This folder will in the future contain open source flash loaders for great success.
