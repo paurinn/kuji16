@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "stdafx.h"
 
-int kernal16_new(struct kernal16 **state, struct chipdef16 *chip, char *com_path) {
+int kernal16_new(struct kernal16 **state, struct chipdef16 *chip, int clockid, char *com_path) {
 	char path[256];
 	int rc;
 	memset(path, 0x00, sizeof(path));
@@ -31,9 +31,13 @@ int kernal16_new(struct kernal16 **state, struct chipdef16 *chip, char *com_path
 	assert(*state);
 
 	(*state)->chip = chip;
+	(*state)->clockid = clockid;
 
-	//FIXME: Hardcoded bitrate of 9600.
-	snprintf(path, sizeof(path) - 1, "%s:9600:8N1", com_path);
+	if (chip->bps2[clockid] == 0) {
+		LOGD("Using default baud rate 9600!");
+		chip->bps2[clockid] = 9600;
+	}
+	snprintf(path, sizeof(path) - 1, "%s:%d:8N1", com_path, chip->bps2[clockid]);
 
 	rc = serial_open(&(*state)->serial, path);
 	if (rc != E_NONE) {
@@ -101,8 +105,6 @@ int kernal16_blankcheck(struct kernal16 *state, uint32_t flash_base) {
 	serial_purge(&state->serial);
 
 	buf[0] = KERNAL16_CMD_BLANKCHECK;
-
-	//Address & size are big endian.
 	buf[3] = (flash_base & 0xFF0000) >> 16;
 	buf[2] = (flash_base & 0x00FF00) >> 8;
 	buf[1] = (flash_base & 0x0000FF);
@@ -162,8 +164,6 @@ int kernal16_erasechip(struct kernal16 *state, uint32_t flash_base) {
 	serial_purge(&state->serial);
 
 	buf[0] = KERNAL16_CMD_ERASECHIP;
-
-	//Address & size are big endian.
 	buf[3] = (flash_base & 0xFF0000) >> 16;
 	buf[2] = (flash_base & 0x00FF00) >> 8;
 	buf[1] = (flash_base & 0x0000FF);
@@ -201,7 +201,7 @@ int kernal16_erasechip(struct kernal16 *state, uint32_t flash_base) {
 				return E_MSGMALFORMED;
 			}
 		} else {
-			LOGR(".");
+			LOGR("#");
 			msleep(250);
 		}
 	}
@@ -221,8 +221,6 @@ int kernal16_readflash(struct kernal16 *state, uint32_t flash_base, uint8_t *buf
 	uint8_t cmd[4];
 
 	cmd[0] = KERNAL16_CMD_READFLASH;
-
-	//Address & size are big endian.
 	cmd[3] = (flash_base & 0xFF0000) >> 16;
 	cmd[2] = (flash_base & 0x00FF00) >> 8;
 	cmd[1] = (flash_base & 0x0000FF);
@@ -298,8 +296,6 @@ int kernal16_writeflash(struct kernal16 *state, uint32_t flash_base, uint8_t *bu
 	uint8_t cmd[6];
 
 	cmd[0] = KERNAL16_CMD_WRITEFLASH;
-
-	//Address is big endian.
 	cmd[1] = (flash_base & 0xFF);
 	cmd[2] = (flash_base >> 8) & 0xFF;
 	cmd[3] = (flash_base >> 16) & 0xFF;

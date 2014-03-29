@@ -287,7 +287,6 @@ extern struct mcu16_tag mcu16_map[];
 
 /** Enumeration of supported crystal frequencies. */
 enum frequency {
-	FREQ_INVALID	= 0,		/**< Not a valid frequency. Do not remove. */
 	FREQ_3MHZ		= 3000000,	/**< 3 megahertz. */
 	FREQ_4MHZ		= 4000000,	/**< 4 megahertz. */
 	FREQ_5MHz		= 5000000,	/**< 5 megahertz. */
@@ -301,7 +300,7 @@ enum frequency {
 };
 
 /** Total number of frequencies supported. This is to size arrays and such. */
-#define N_FREQUENCY		11
+#define N_FREQUENCY		10
 
 /** List of all available crystal frequencies. */
 int frequencies[N_FREQUENCY];
@@ -336,7 +335,8 @@ struct chipdef16 {
 	char name[256];						/**< Common name of MCU. */
 	char kernal[256];					/**< Base name of the kernal file aka stage 2 boot loader. */
 	enum frequency clock[N_FREQUENCY];	/**< Array of valid crystal frequencies when stage 1 is running. */
-	enum bps bps[N_BPS];				/**< Array of valid baud rates for stage 1. This should complement clock[] item by item. */
+	enum bps bps[N_FREQUENCY];			/**< Array of valid baud rates for stage 1. This should complement clock[] item by item. */
+	enum bps bps2[N_FREQUENCY];			/**< Array of valid baud rates for stage 2. This should complement clock[] item by item. */
 	uint16_t address_load;				/**< Where in RAM to store stage 2 binary. This is usually 0x0990 or 0x0190. */
 	uint32_t flash_start;				/**< Where in FLASH to store user firmware. 24 bit range. */
 	uint32_t flash_end;					/**< Last address of flash. 24 bit range. */

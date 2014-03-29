@@ -79,43 +79,40 @@ int birom16_connect(struct birom16_state *state) {
 	serial_purge(&state->serial);
 
 	memset(&buf, 0x00, sizeof(buf));
-	buf[0] = BIROM16_CMD_OPEN;
 
-	LOGD("Probing for MCU...");
-	rc = serial_write(&state->serial, buf, 1);
-	if (rc < 1) {
-		LOGE("Error writing to serial port! Aborting.");
-		return rc;
+	double timeout = get_ticks() + 10;
+	while (get_ticks() < timeout) {
+		msleep(10);
+
+		buf[0] = BIROM16_CMD_PROBE;
+		rc = serial_write(&state->serial, buf, 1);
+		if (rc < 1) {
+			LOGE("Error writing to serial port! Aborting.");
+			return rc;
+		}
+
+		serial_drain(&state->serial);
+
+		memset(&buf, 0x00, sizeof(buf));
+		while ((rc = serial_read(&state->serial, buf, 1)) > 0) {
+			if (buf[0] == BIROM16_RESP_PROBE) {
+				return E_NONE;	//Returning zero to mean MCU is alive.
+			}
+		}
+
+		if (rc < 0) {
+			LOGE("Error reading from serial port! Aborting.");
+			return rc;
+		}
+
+		if (buf[0] > 0 && buf[0] != BIROM16_RESP_PROBE) {
+			LOGE("Malformed response from MCU (0x%X). Please power off board and try again.", buf[0]);
+			return E_MSGMALFORMED;
+		}
 	}
 
-	serial_drain(&state->serial);
-
-	memset(&buf, 0x00, sizeof(buf));
-	rc = serial_read(&state->serial, buf, 1);
-	if (rc < 0) {
-		LOGE("Error reading from serial port! Aborting.");
-		return rc;
-	}
-
-	//If there was no reply at all.
-	if (buf[0] == 0) {
-		LOGE("Time-out waiting for MCU.");
-		return E_TIMEOUT;
-	}
-
-	//High nibble of command must be high nibble of reponse.
-	if ((buf[0] & 0xF0) != (BIROM16_CMD_OPEN & 0xF0)) {
-		LOGE("Malformed response from MCU.");
-		return E_MSGMALFORMED;
-	}
-
-	//Low nibble is result of operation.
-	if ((buf[0] & 0x0F) != BIROM16_RESP_ACK) {
-		LOGE("MCU responded with failure!");
-		return E_ERROR;
-	}
-
-	return E_NONE;
+	LOGD("ERROR - Time-out waiting for MCU.");
+	return E_TIMEOUT;
 }
 
 int birom16_write(struct birom16_state *state, uint16_t address, uint8_t *data, uint16_t size) {
@@ -125,8 +122,6 @@ int birom16_write(struct birom16_state *state, uint16_t address, uint8_t *data, 
 	serial_purge(&state->serial);
 
 	buffer[0] = BIROM16_CMD_WRITE;
-	//Address & size are big endian.
-	//FIXME
 	buffer[1] = (address & 0xFF00) >> 8;
 	buffer[2] = (address & 0x00FF);
 	buffer[3] = (size & 0xFF00) >> 8;

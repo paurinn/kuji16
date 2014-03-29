@@ -30,18 +30,19 @@ enum failures {
 		connection failure in RS232 cable.
 	*/
 	EXIT_FAIL_TIMEOUT		= 1,
-	EXIT_FAIL_NOTBLANK		= 2,	/**< Was asked to blank check and the MCU was NOT blank. */
-	EXIT_FAIL_READ			= 3,	/**< Error reading from MCU. */
-	EXIT_FAIL_WRITE			= 4,	/**< Error writing to MCU. */
-	EXIT_FAIL_SRECORD		= 5,	/**< Error in S-Record either file I/O or its data. */
-	EXIT_FAIL_CRC			= 6,	/**< Error in communication detected by CRC. */
-	EXIT_FAIL_SERIAL		= 7,	/**< Error in serial port such as access restrictions or errors in reading or writing. */
-	EXIT_FAIL_CHIPDEF		= 8,	/**< Error in 'chipdef16.ini' either reading from it or in its data. */
-	EXIT_FAIL_ARGUMENT		= 9,	/**< Error in one of the arguments either missing or invalid. */
-	EXIT_FAIL_INITBIROM		= 10,	/**< Error initializing Birom16 interface. */
-	EXIT_FAIL_INITKERNAL	= 11,	/**< Error initializing Kernal interface. */
-	EXIT_FAIL_BLANK			= 12,	/**< Error blank-checking MCU. */
-	EXIT_FAIL_ERASE			= 13,	/**< Error erasing MCU. */
+	EXIT_FAIL_NOTBLANK		= 2,	/**< Was asked to blank check or write and the MCU was NOT blank. */
+	EXIT_FAIL_ISBLANK		= 3,	/**< Was asked to blank check or read and the MCU was blank. */
+	EXIT_FAIL_READ			= 4,	/**< Error reading from MCU. */
+	EXIT_FAIL_WRITE			= 5,	/**< Error writing to MCU. */
+	EXIT_FAIL_SRECORD		= 6,	/**< Error in S-Record either file I/O or its data. */
+	EXIT_FAIL_CRC			= 7,	/**< Error in communication detected by CRC. */
+	EXIT_FAIL_SERIAL		= 8,	/**< Error in serial port such as access restrictions or errors in reading or writing. */
+	EXIT_FAIL_CHIPDEF		= 9,	/**< Error in 'chipdef16.ini' either reading from it or in its data. */
+	EXIT_FAIL_ARGUMENT		= 10,	/**< Error in one of the arguments either missing or invalid. */
+	EXIT_FAIL_INITBIROM		= 11,	/**< Error initializing Birom16 interface. */
+	EXIT_FAIL_INITKERNAL	= 12,	/**< Error initializing Kernal interface. */
+	EXIT_FAIL_BLANK			= 13,	/**< Error blank-checking MCU. */
+	EXIT_FAIL_ERASE			= 14,	/**< Error erasing MCU. */
 };
 
 /** License clause. */
@@ -72,11 +73,12 @@ Usage: ./kuji16 -m <mcu> -p <com> [-c <freq>] [-r] [-e] [-v] [-d] [-q] [-w <some
   -V         Print application version and exit.\n\
   -d         Hex-dump communication to stdout.\n\
   -v         Select verbosity level: 0-none, 1-errors, 2-warnings, 3-info, 4-debug.\n\
+  -l <file>  Write log to <file> instead of main.log.\n\
   -p <com>   Set com port Id from 1-99 on Windows or com port device e.g. '/dev/ttyS0' on Linux.\n\
   -m <mcu>   Select MCU by name e.g. 'mb90f598g'. Case-insensitive.\n\
   -c <freq>  Select target crystal (megahertz) e.g 4, 8, 16 etc. Default is 4 Mhz.\n\
   -b         Blank-check and exit immediately after.\n\
-  -r         Read MCU flash and write it to stdout as S-Records.\n\
+  -r <file>  Read MCU flash and write it as S-Records to file.\n\
   -e         Erase MCU flash.\n\
   -w <file>  Write S-Record file to MCU flash.\n\
 \n\
@@ -89,24 +91,25 @@ Note: The file must be standard Motorola S-Record.\n\
 Exit codes:\n\
 --------------\n\
 1 : Timed out waiting for processor. Check cable and stuff.\n\
-2 : Was asked to blank check and the MCU was NOT blank.\n\
-3 : Error reading from MCU.\n\
-4 : Error writing to MCU.\n\
-5 : Error in S-Record either file I/O or its data.\n\
-6 : Error in communication detected by CRC.\n\
-7 : Error in serial port such as access restrictions or errors in reading or writing.\n\
-8 : Error in 'chipdef16.ini' either reading from it or in its data.\n\
-9 : Error in one of the arguments either missing or invalid.\n\
-10 : Error initializing Birom16 interface.\n\
-11 : Error initializing Kernal interface.\n\
-12 : Error blank-checking MCU.\n\
-13 : Error erasing MCU.\n\
+2 : Was asked to blank check or write and the MCU was NOT blank.\n\
+3 : Was asked to blank check or read and the MCU was blank.\n\
+4 : Error reading from MCU.\n\
+5 : Error writing to MCU.\n\
+6 : Error in S-Record either file I/O or its data.\n\
+7 : Error in communication detected by CRC.\n\
+8 : Error in serial port such as access restrictions or errors in reading or writing.\n\
+9 : Error in 'chipdef16.ini' either reading from it or in its data.\n\
+10 : Error in one of the arguments either missing or invalid.\n\
+11 : Error initializing Birom16 interface.\n\
+12 : Error initializing Kernal interface.\n\
+13 : Error blank-checking MCU.\n\
+14 : Error erasing MCU.\n\
 ";
 /**
 Print out usage information to stdout.
 */
 void print_help() {
-	fprintf(stderr, "%s%s%s",
+	LOGR("%s%s%s",
 		version_string(),
 		help,
 		license
@@ -143,15 +146,15 @@ int main(int argc, char *argv[]) {
 	enum frequency freq = 0;
 	struct chipdef16 *chip = NULL;
 	bool debugging = false;
-	char path[256];
 	int bytes = 0;
 	uint16_t csum = 0;
 
-
-	char *argstr = "hHVdv:p:m:c::brew:";
+	char *argstr = "hHVdl:v:p:m:c:ber:w:";
 	char *srecpath = NULL;
+	char *savepath = NULL;
 
 #ifdef __WIN32__
+	char path[256];
 	int comid = 0;
 #else
 	char *compath = NULL;
@@ -164,7 +167,6 @@ int main(int argc, char *argv[]) {
 	bool erase = false;
 	bool read = false;
 	bool write = false;
-	//bool verify = false;
 	bool isblank = false;
 	bool blankcheck = false;
 
@@ -176,14 +178,14 @@ int main(int argc, char *argv[]) {
 
 			case 'H':
 				LOGI("\nSupported MCUs:");
-				for (id = 0; mcu16_map[id].name; id++) {
+				for (id = 1; mcu16_map[id].name; id++) {
 					LOGI("%s", mcu16_map[id].name);
 				}
 				LOGI("--------------------------");
 				return EXIT_SUCCESS;
 
 			case 'V':
-				fprintf(stderr, "%s\n%s\n", version_string(), license);
+				LOGR("%s\n%s\n", version_string(), license);
 				return EXIT_SUCCESS;
 
 			case 'd':
@@ -192,7 +194,17 @@ int main(int argc, char *argv[]) {
 
 			case 'v':
 				verbosity = strtoint32(optarg, 10, NULL);
-				fprintf(stderr, "\nVerbosity: %d\n", verbosity);
+				LOGD("Verbosity: %d", verbosity);
+				break;
+
+			case 'l':
+				if (optarg) {
+					loggpath = optarg;
+				} else if (argv[optind] && argv[optind][0] && argv[optind][0] != '-') {
+					loggpath = argv[optind];
+					optind++;
+				}
+				LOGD("Using '%s' for log.", loggpath);
 				break;
 
 			case 'p':
@@ -231,6 +243,10 @@ int main(int argc, char *argv[]) {
 				break;
 
 			case 'r':
+				savepath = optarg;
+				if (savepath && savepath[0] == '\0') {
+					savepath = NULL;
+				}
 				read = true;
 				break;
 
@@ -240,18 +256,15 @@ int main(int argc, char *argv[]) {
 
 			case 'w':
 				srecpath = optarg;
+				if (srecpath && srecpath[0] == '\0') {
+					srecpath = NULL;
+				}
 				write = true;
 				break;
 
-/*
-			case 'v':
-				verify = true;
-				break;
-*/
-
 			case '?':
-				LOGD("Option %c", optopt);
-				break;
+				LOGE("Argument error!");
+				return EXIT_FAIL_ARGUMENT;
 		}
 	}
 
@@ -276,9 +289,15 @@ int main(int argc, char *argv[]) {
 #endif
 
 	if (write && srecpath == NULL) {
-		LOGE("ERROR: Missing or malformed S-Record file name.");
+		LOGE("ERROR: Missing or malformed option to '-w'.");
 		print_help();
-		return EXIT_FAIL_SRECORD;
+		return EXIT_FAIL_ARGUMENT;
+	}
+
+	if (read && savepath == NULL) {
+		LOGE("ERROR: Missing or malformed option to '-r'.");
+		print_help();
+		return EXIT_FAIL_ARGUMENT;
 	}
 
 	//Morph frequency into MCU specific index that we select bps by.
@@ -328,6 +347,9 @@ int main(int argc, char *argv[]) {
 
 	birom->serial.debug = debugging;
 
+	//First handshake is to give user chance to power up MCU.
+	LOGI("Probing for MCU. Please apply power to board...");
+
 	//Is the audience listening?
 	rc = birom16_connect(birom);
 	if (rc != E_NONE) {
@@ -350,7 +372,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Call stage 1 and transfer control to stage 2 kernal16.
-	rc = birom16_call(birom, 0x0000);
+	rc = birom16_call(birom, chip->address_load);
 	if (rc != E_NONE) {
 		birom16_free(&birom);
 		return EXIT_FAIL_TIMEOUT;
@@ -369,9 +391,9 @@ int main(int argc, char *argv[]) {
 
 #ifdef __WIN32__
 	snprintf(path, sizeof(path), "\\\\.\\COM%d", comid);
-	rc = kernal16_new(&kernal, chip, path);
+	rc = kernal16_new(&kernal, chip, freqid, path);
 #else
-	rc = kernal16_new(&kernal, chip, compath);
+	rc = kernal16_new(&kernal, chip, freqid, compath);
 #endif
 	if (rc != E_NONE) {
 		kernal16_free(&kernal);
@@ -380,6 +402,7 @@ int main(int argc, char *argv[]) {
 
 	kernal->serial.debug = debugging;
 
+	//Is the audience listening?
 	rc = kernal16_intro(kernal);
 	if (rc != E_NONE) {
 		kernal16_free(&kernal);
@@ -395,30 +418,28 @@ int main(int argc, char *argv[]) {
 	}
 	isblank = (rc == 1);
 
-	//Exit early if chip is already blank and
-	//therefor nothing to read or erase.
-	if ((isblank && (read || erase || blankcheck) && !write) || (isblank && (blankcheck || !write))) {
-		LOGI("The MCU flash is empty, nothing to do.");
-		LOGD("========== KERNAL16 DONE ==========");
-		kernal16_free(&kernal);
-		return EXIT_SUCCESS;
-	}
-
-	//Return blank-check result.
-	if (blankcheck) {
+	//Exit early if chip is full and there are no operations or
+	//if chip is empty and operations would not be possible.
+	if (
+		(blankcheck)
+		|| (isblank && (!write))
+		|| ((isblank && (read || erase) && !write))
+		|| (read && isblank)
+		|| (!isblank && (!write && !read && !erase))
+	) {
 		LOGI("== Chip Is %s ==", (isblank) ? "Blank" : "Not Blank");
 		LOGD("========== KERNAL16 DONE ==========");
 		kernal16_free(&kernal);
-		return isblank ? EXIT_SUCCESS : EXIT_FAIL_NOTBLANK;
+		return isblank ? EXIT_FAIL_ISBLANK: EXIT_FAIL_NOTBLANK;
 	}
 
 	//Read flash contents
 	if (read) {
 		if (isblank) {
-			LOGI("The MCU flash is empty.");
+			LOGI("== Chip Is Blank ==");
 			LOGD("========== KERNAL16 DONE ==========");
 			kernal16_free(&kernal);
-			return EXIT_SUCCESS;
+			return EXIT_FAIL_ISBLANK;
 		}
 
 		//Sector by sector!
@@ -428,8 +449,8 @@ int main(int argc, char *argv[]) {
 		bytes = 0;
 		csum = 0;
 
-		LOGR("[INF]: Reading");
-		for (uint32_t addr = chip->flash_start; addr < chip->flash_start + chip->flash_size; addr += 0x200) {
+		LOGR("[INF]: Reading ");
+		for (uint32_t addr = chip->flash_start; addr < chip->flash_start + chip->flash_size; addr += 0x200, bytes += 512) {
 			rc = kernal16_readflash(kernal, addr, buff + bytes, 512, &csum);
 			if (rc != E_NONE) {
 				LOGE("Error receiving flash contents.");
@@ -437,19 +458,20 @@ int main(int argc, char *argv[]) {
 				return EXIT_FAIL_READ;
 			}
 
-			bytes += 512;
 #ifdef DEBUGGING
-			fprintf(stderr, "\rReceiving 0x%06X / 0x%06X bytes, last CRC16 0x%04X", bytes, chip->flash_size, csum);
+			LOGR("\rReceiving 512 bytes from sector 0x%06X, last CRC16 0x%04X", addr, csum);
 #else
-			LOGR(".");
+			if (bytes % 4096 == 0) {
+				LOGR("#");
+			}
 #endif
 		}
 
-		fprintf(stderr, "\n");
+		LOGR("\n");
 
-		rc = srec_printbuffer(buff, bytes, 2, chip->flash_start);
+		rc = srec_writefilebin(buff, bytes, savepath, 2, chip->flash_start);
 		if (rc != E_NONE) {
-			LOGE("Error serializing S-Record.");
+			LOGE("Error serializing S-Records.");
 			kernal16_free(&kernal);
 			return EXIT_FAIL_SRECORD;
 		}
@@ -460,9 +482,17 @@ int main(int argc, char *argv[]) {
 		LOGI("== Chip Read Successfully ==");
 	}
 
+	//Return early is chip is full and trying to write without erasing first.
+	if (!isblank && write && !erase) {
+		LOGE("Error: Trying to write into an already full MCU. Did you forget to add '-e' argument?");
+		LOGD("========== KERNAL16 DONE ==========");
+		kernal16_free(&kernal);
+		return EXIT_FAIL_NOTBLANK;
+	}
+
 	//Erase chip.
 	if (erase && !isblank) {
-		LOGR("[INF]: Erasing");
+		LOGR("[INF]: Erasing ");
 		rc = kernal16_erasechip(kernal, chip->flash_start);
 		if (rc != E_NONE) {
 			LOGR("\n");
@@ -489,55 +519,25 @@ int main(int argc, char *argv[]) {
 
 		LOGD("Loaded S-Records from '%s'.", srecpath);
 
+		bytes = 0;
+
 		//Write out linear buffer into MCU flash in 512 byte chunks.
 		LOGD("Writing 0x%06X bytes...", chip->flash_size);
-		LOGR("[INF]: Writing");
-		for (uint32_t addr = chip->flash_start; addr < chip->flash_end; addr += 512) {
+		LOGR("[INF]: Writing ");
+		for (uint32_t addr = chip->flash_start; addr < chip->flash_end; addr += 512, bytes += 512) {
 			if (isflashbufempty(buf + addr, 512) == false) {
-				LOGR(".");
 				rc = kernal16_writeflash(kernal, addr, buf + addr, 512);
 				if (rc != E_NONE) {
 					kernal16_free(&kernal);
 					return EXIT_FAIL_WRITE;
 				}
+
+				if (bytes % 4096 == 0) {
+					LOGR("#");
+				}
 			}
 		}
 		LOGR("\n");
-
-		/*
-		if (verify) {
-			uint8_t *mcubuf = calloc(1, chip->flash_size);
-			assert(mcubuf);
-
-			memset(mcubuf, 0xFF, chip->flash_size);
-			bytes = 0;
-			csum = 0;
-
-			for (uint32_t addr = chip->flash_start; addr < chip->flash_start + chip->flash_size; addr += 0x200) {
-				rc = kernal16_readflash(kernal, addr, mcubuf + bytes, 512, &csum);
-				if (rc != E_NONE) {
-					LOGE("Error receiving flash contents.");
-					kernal16_free(&kernal);
-					return EXIT_FAILURE;
-				}
-
-				bytes += 512;
-				fprintf(stderr, "\rReceiving 0x%06X / 0x%06X bytes, last CRC16 0x%04X", bytes, chip->flash_size, csum);
-			}
-
-			fprintf(stderr, "\n");
-
-			if (debugging) {
-				hex_dump(stderr, buf, chip->flash_size);
-				fprintf(stderr, "\nVS\n");
-				hex_dump(stderr, mcubuf, chip->flash_size);
-			}
-
-			free(mcubuf);
-			mcubuf = NULL;
-
-		}
-		*/
 
 		free(buf);
 		buf = NULL;
@@ -549,8 +549,6 @@ int main(int argc, char *argv[]) {
 	kernal16_free(&kernal);
 
 	LOGD("========== KERNAL16 DONE ==========");
-
-	LOGI("== MCU '%s' on 'COM%d' is OK ==", chip->name, comid);
 
 	return EXIT_SUCCESS;
 }

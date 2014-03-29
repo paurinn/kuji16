@@ -57,6 +57,9 @@ int verbosity = LOGG_INFO;
 /** Shared file pointer to main log file. */
 FILE *flogg = NULL;
 
+/** Can be overwritten in main via command line argument. */
+char *loggpath = "main.log";
+
 #ifdef DEBUGGING
 int logg(const char *file, int line, enum logg_type type, const char *fmt, ...) {
 #else
@@ -69,9 +72,9 @@ int logg(enum logg_type type, const char *fmt, ...) {
 	va_list ap;
 
 	if (flogg == NULL)  {
-		flogg = fopen("main.log", "w+");
+		flogg = fopen(loggpath, "w+");
 		if (flogg == NULL) {
-			fprintf(stderr, "Could not open file 'main.log' for writing.");
+			fprintf(stderr, "Could not open file '%s' for writing.", loggpath);
 		}
 	}
 
@@ -133,8 +136,8 @@ int logg(enum logg_type type, const char *fmt, ...) {
 	fflush(flogg);
 
 #ifdef CONSOLE
-	fwrite(obuf, n, 1, stderr);
-	fflush(stderr);
+	fwrite(obuf, n, 1, stdout);
+	fflush(stdout);
 #endif
 
 	free(fmtbuf);
@@ -153,9 +156,9 @@ int loggr(const char *fmt, ...) {
 	va_list ap;
 
 	if (flogg == NULL)  {
-		flogg = fopen("main.log", "w+");
+		flogg = fopen(loggpath, "w+");
 		if (flogg == NULL) {
-			fprintf(stderr, "Could not open file 'main.log' for writing.");
+			fprintf(stderr, "Could not open file '%s' for writing.", loggpath);
 		}
 	}
 
@@ -171,8 +174,8 @@ int loggr(const char *fmt, ...) {
 	fflush(flogg);
 
 #ifdef CONSOLE
-	fwrite(obuf, n, 1, stderr);
-	fflush(stderr);
+	fwrite(obuf, n, 1, stdout);
+	fflush(stdout);
 #endif
 
 	free(fmtbuf);
@@ -196,12 +199,16 @@ void logg_hex(uint8_t *data, size_t size) {
 	char charstr[16*1 + 5] = {0};
 
 	if (flogg == NULL)  {
-		flogg = fopen("main.log", "w+");
+		flogg = fopen(loggpath, "w+");
 		if (flogg == NULL) {
-			LOGE("Could not open file 'main.log' for writing.");
-			return;
+			LOGE("Could not open file '%s' for writing.", loggpath);
 		}
 	}
+
+	if (flogg == NULL) {
+		return;
+	}
+
 
 	for(n = 1; n <= size; n++) {
 		if (n % 16 == 1) {
@@ -225,6 +232,7 @@ void logg_hex(uint8_t *data, size_t size) {
 		if (n % 16 == 0) {
 			/* line completed */
 			fprintf(flogg, "[%4.4s] %-50.50s |%-16.16s|\n", addrstr, hexstr, charstr);
+			fprintf(stdout, "[%4.4s] %-50.50s |%-16.16s|\n", addrstr, hexstr, charstr);
 			hexstr[0] = 0;
 			charstr[0] = 0;
 		} else if (n % 8 == 0) {
@@ -238,9 +246,11 @@ void logg_hex(uint8_t *data, size_t size) {
 	if (strlen(hexstr) > 0) {
 		/* print rest of buffer if not empty */
 		fprintf(flogg, "[%4.4s] %-50.50s |%-16.16s|\n", addrstr, hexstr, charstr);
+		fprintf(stdout, "[%4.4s] %-50.50s |%-16.16s|\n", addrstr, hexstr, charstr);
 	}
 
 	fflush(flogg);
+	fflush(stdout);
 }
 
 /** @} */

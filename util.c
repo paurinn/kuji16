@@ -41,7 +41,7 @@ int hex_dump(FILE *F, void *data, int size) {
 	for(n = 1; n <= size; n++) {
 		if (n % 16 == 1) {
 			/* store address for this line */
-			snprintf(addrstr, sizeof(addrstr), "%08X", (void *)p - data);
+			snprintf(addrstr, sizeof(addrstr), "%08X", (unsigned)((void *)p - data));
 		}
 
 		c = *p;
@@ -92,7 +92,8 @@ void msleep(uint32_t ms) {
 #ifdef __WIN32__
 	SleepEx(ms, TRUE);
 #else
-	struct timespec ts = { .tv_sec = 0, .tv_nsec = CLAMP((ms * 1000000), 0, 999999999) };
+	ms *= 1000000;
+	struct timespec ts = { .tv_sec = 0, .tv_nsec = CLAMP(ms, 1, 999999999) };
 	nanosleep(&ts, NULL);
 #endif
 }
@@ -177,15 +178,6 @@ char *str_rtrim(char *str) {
 
 char *str_trim(char *str) {
 	return(str_rtrim(str_ltrim(str)));
-}
-
-void str_reverse(char *s) {
-    int c, i, j;
-    for ( i = 0, j = strlen(s)-1; i < j; i++, j--) {
-        c = s[i];
-        s[i] = s[j];
-        s[j] = c;
-    }
 }
 
 int32_t strtoint32(char *s, int base, int *status) {
@@ -422,151 +414,6 @@ char *strtok_r(char *str, const char *delim, char **nextp) {
 }
 #endif
 
-int fwithin_p(float value, float limit, float deviation) {
-	return (value >= limit - (limit * deviation) && value <= limit + (limit * deviation));
-}
-
-int filter_new(struct filter **filter, size_t size, int32_t error) {
-	calloc(1, sizeof(struct filter));
-	assert(filter);
-	(*filter)->error = error;
-	return E_NONE;
-}
-
-int64_t filter_push(struct filter *filter, int32_t value) {
-	int64_t sum = 0;
-
-	if (llabs(filter->mean - value) <= filter->error) {
-		filter->stablecount++;
-		filter->stable = filter->stablecount > ARRAY_SIZE(filter->values);
-	} else {
-		filter->stablecount = 0;
-		filter->stable = false;
-	}
-
-	filter->values[filter->index++ % ARRAY_SIZE(filter->values)] = value;
-	for (size_t i = 0; i < ARRAY_SIZE(filter->values); i++) {
-		sum += filter->values[i];
-	}
-
-	filter->mean = sum / ARRAY_SIZE(filter->values);
-
-	return filter->mean;
-}
-
-void filter_free(struct filter **filter) {
-	if (filter && *filter) {
-		free(*filter);
-		*filter = NULL;
-	}
-}
-
-void filter_zero(struct filter *filter, uint32_t error) {
-	memset(filter->values, 0x00, sizeof(filter->values));
-	filter->mean = 0;
-	filter->stablecount = 0;
-	filter->stable = false;
-	filter->error = error > 0 ? error : 20;
-}
-
-/********************************[ZLIB CODE]**********************************
-
-	Copyright (C) 1995-2013 Jean-loup Gailly and Mark Adler
-
-	This software is provided 'as-is', without any express or implied
-	warranty.  In no event will the authors be held liable for any damages
-	arising from the use of this software.
-
-	Permission is granted to anyone to use this software for any purpose,
-	including commercial applications, and to alter it and redistribute it
-	freely, subject to the following restrictions:
-
-	1. The origin of this software must not be misrepresented; you must not
-	claim that you wrote the original software. If you use this software
-	in a product, an acknowledgment in the product documentation would be
-	appreciated but is not required.
-	2. Altered source versions must be plainly marked as such, and must not be
-	misrepresented as being the original software.
-	3. This notice may not be removed or altered from any source distribution.
-
-	Jean-loup Gailly        Mark Adler
-	jloup@gzip.org          madler@alumni.caltech.edu
-
-*/
-
-/** Table of CRCs of all 8-bit messages. */
-static unsigned long crc16_table[256];
-
-/** Flag: has the table been computed? Initially false. */
-static int crc16_table_computed = 0;
-
-/** Calculate CRC16  values for all 8-bit messages. */
-void make_crc16_table(void) {
-	unsigned long c;
-	int n, k;
-	for (n = 0; n < 256; n++) {
-		c = (unsigned long) n;
-		for (k = 0; k < 8; k++) {
-			if (c & 1) {
-				c = 0xedb88320L ^ (c >> 1);
-			} else {
-				c = c >> 1;
-			}
-		}
-		crc16_table[n] = c;
-	}
-	crc16_table_computed = 1;
-}
-
-unsigned long update_crc16(unsigned long crc, unsigned char *buf, int len) {
-	unsigned long c = crc ^ 0xffffffffL;
-	int n;
-	if (!crc16_table_computed) make_crc16_table();
-	for (n = 0; n < len; n++) c = crc16_table[(c ^ buf[n]) & 0xff] ^ (c >> 8);
-	return c ^ 0xffffffffL;
-}
-
-unsigned long crc16(unsigned char *buf, int len) {
-	return update_crc16(0L, buf, len);
-}
-
-/******************************[END OF ZLIB CODE]******************************/
-
-uint16_t update_crc16x(uint16_t crc, uint8_t *buf, uint16_t len) {
-	while (len > 0) {
-		crc = ((crc << 5) | (crc >> 11)) ^ *buf;
-		len--;
-		buf++;
-	}
-
-	return crc;
-}
-
-uint16_t crc16x(uint8_t *buf, uint16_t len) {
-	return update_crc16x(0, buf, len);
-}
-
-uint32_t crc24(uint16_t x16) {
-	uint8_t b1, b2, b3;
-	uint32_t res;
-
-	x16 = ((x16 << 5) | (x16 >> 11));
-	b1 = x16 & 0xFF;
-	x16 = x16 ^ b1;
-	res = b1;
-
-	x16 = ((x16 << 5) | (x16 >> 11));
-	b2 = x16 & 0xFF;
-	x16 = x16 ^ b2;
-	res = res | ((uint32_t)b2 << 8);
-
-	x16 = ((x16 << 5) | (x16 >> 11));
-	b3 = x16 & 0xFF;
-	res = res | ((uint32_t)b3 << 16);
-
-	return res;
-}
-
 uint8_t checksum(uint8_t *buf, int size) {
 	uint16_t sum = 0;
 	while (size > 0) {
@@ -638,26 +485,6 @@ long filedata(const char *path, uint8_t **buf) {
 	}
 
 	return nread;
-}
-
-/**
-	Scan into ipv4 string and see if it contains an IPv4 compatible address.
-	Compatible address is either a decimal value or 4 dot seperated decimals (0-255).
-	The string ipv4 may contain any isspace() valid characters before the address.
-	@param ipv4 The string to scan.
-	@return If there is a valid IPv4 adress in the string then we return it's starting character.
-	@return Otherwise returns NULL.
-*/
-const char *validate_ipv4(const char *ipv4) {
-	const char *s;
-	int a, b, c, d, rc;
-	//Skip past any whitespace at the beginning.
-	for (s = ipv4; s && isspace(*s); s++);
-	//Let generic pattern matcher do the heavy lifting.
-	rc = sscanf(s, "%d.%d.%d.%d", &a, &b, &c, &d);
-	//FIXME, if rc == 1 then divide ip to 4 bytes.
-	if (rc != 4) return NULL;
-	return ((a >= 0 && a <= 255) && (b >= 0 && b <= 255) && (c >= 0 && c <= 255) && (d >= 0 && d <= 255)) ? s : NULL;
 }
 
 /** @} */

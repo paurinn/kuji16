@@ -148,8 +148,8 @@ int serial_open(struct serial *serial, char *uri) {
 	termios.c_lflag &= ~ICANON; /* Set non-canonical mode */
 
 	//Set non-blocking.
-	//termios.c_cc[VTIME] = 0;
-	//termios.c_cc[VMIN] = 100;
+	termios.c_cc[VTIME] = 0;
+	termios.c_cc[VMIN] = 100;
 
 	cfsetispeed(&termios, com_bps_mask(serial->baudrate));
 	cfsetospeed(&termios, com_bps_mask(serial->baudrate));
@@ -159,6 +159,8 @@ int serial_open(struct serial *serial, char *uri) {
 		return E_SETOPTION;
 	}
 #endif
+
+	LOGD("[Serial] Opening '%s' %d:%d%c%d", serial->address, serial->baudrate, serial->bytesize, serial->parity, serial->stopbits);
 
 	return E_NONE;
 }
@@ -205,47 +207,69 @@ void serial_close(struct serial *serial) {
 
 int serial_read(struct serial *serial, uint8_t *buffer, int count) {
 #ifdef __WIN32__
-	if (serial->fd == INVALID_HANDLE_VALUE) return E_NOTOPEN;
+	if (serial->fd == INVALID_HANDLE_VALUE) {
+		LOGE("Error: Serial port not open!");
+		return E_NOTOPEN;
+	}
 	DWORD n = 0;
 	if(!ReadFile(serial->fd, buffer, count, &n, NULL)){
+		LOGE("Error %d reading from serial port!", GetLastError());
 		return E_READ;
 	}
 #else
-	if (serial->fd < 0) return E_NOTOPEN;
-	int n;
-	n = read(serial->fd, buffer, count);
-	if (n < 0) {
-		if (n == EAGAIN) return E_TIMEOUT;
-		return (E_READ);
+	if (serial->fd < 0) {
+		LOGE("Error: Serial port not open!");
+		return E_NOTOPEN;
+	}
+	int n = 0;
+	double timeout = get_ticks() + 0.5;
+	while (get_ticks() < timeout) {
+		n = read(serial->fd, buffer, count);
+		if (n < 0) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+				msleep(1);
+				continue;
+			}
+			LOGE("Error %d reading from serial port!", errno);
+			return (E_READ);
+		}
 	}
 #endif
 
-	buffer[n] = '\0';
 	if (serial->debug && n > 0) {
 		LOGI("[%s READ]", serial->address);
-		hex_dump(stderr, buffer, n);
+		logg_hex(buffer, n);
 	}
 	return n;
 }
 
 int serial_write(struct serial *serial, uint8_t *buffer, int count) {
 #ifdef __WIN32__
-	if (serial->fd == INVALID_HANDLE_VALUE) return E_NOTOPEN;
+	if (serial->fd == INVALID_HANDLE_VALUE) {
+		LOGE("Error: Serial port not open!");
+		return E_NOTOPEN;
+	}
 	DWORD n = 0;
 	if (!WriteFile(serial->fd, buffer, count, &n, NULL)) {
+		LOGE("Error %d writing to serial port.", GetLastError());
 		return E_WRITE;
 	}
 #else
-	if (serial->fd < 0) return E_NOTOPEN;
+	if (serial->fd < 0) {
+		LOGE("Error: Serial port not open!");
+		return E_NOTOPEN;
+	}
+
 	int n;
 	if ((n = write(serial->fd, buffer, count)) < count) {
+		LOGE("Error %d writing to serial port.", errno);
 		return E_WRITE;
 	}
 #endif
 
 	if (serial->debug && n > 0) {
 		LOGI("[%s WRITE]", serial->address);
-		hex_dump(stderr, buffer, n);
+		logg_hex(buffer, n);
 	}
 
 	return n;
@@ -254,21 +278,29 @@ int serial_write(struct serial *serial, uint8_t *buffer, int count) {
 //Write a C string to serial port.
 int serial_puts(struct serial *serial, char *line) {
 #ifdef __WIN32__
-	if (serial->fd == INVALID_HANDLE_VALUE) return E_NOTOPEN;
+	if (serial->fd == INVALID_HANDLE_VALUE) {
+		LOGE("Error: Serial port not open!");
+		return E_NOTOPEN;
+	}
 	DWORD n = 0;
 	if (!WriteFile(serial->fd, line, strlen(line), &n, NULL)) {
+		LOGE("Error %s writing to serial port.", GetLastError());
 		return E_WRITE;
 	}
 #else
-	if (serial->fd < 0) return E_NOTOPEN;
+	if (serial->fd < 0) {
+		LOGE("Error: Serial port not open!");
+		return E_NOTOPEN;
+	}
 	int n;
 	if ((n = write(serial->fd, line, strlen(line))) < 0) {
+		LOGE("Error %s writing to serial port.", errno);
 		return E_WRITE;
 	}
 #endif
 
 	if (serial->debug) {
-		LOGD("[%s WRITE] '%s'", serial->address, line);
+		LOGI("[%s WRITE] '%s'", serial->address, line);
 	}
 
 	return n;
@@ -289,7 +321,9 @@ int serial_drain(struct serial *serial) {
 #ifdef __WIN32__
 	FlushFileBuffers(serial->fd);
 #else
+	LOGD("Draining %d", serial->fd);
 	tcdrain(serial->fd);
+	sync();
 #endif
 	return E_NONE;
 }

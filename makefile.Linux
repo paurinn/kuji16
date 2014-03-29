@@ -17,10 +17,10 @@
 
 # Declare tools.
 SHELL = /bin/sh
-CC = clang
-LD = clang
-#CC = gcc
-#LD = gcc
+#CC = clang
+#LD = clang
+CC = gcc
+LD = gcc
 INSTALL = install
 RM = rm
 MKDIR = mkdir

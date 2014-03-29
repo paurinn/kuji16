@@ -396,7 +396,7 @@ int srec_readfilebin(uint8_t **buf, const char *path, uint32_t address_low, uint
 	return E_NONE;
 }
 
-int srec_printbuffer(uint8_t *buffer, size_t size, uint8_t rectype, uint32_t address) {
+int srec_printbuffer(uint8_t *buf, size_t size, uint8_t rectype, uint32_t address, FILE *F) {
 	uint32_t bl;
 	int n;
 	int i;
@@ -404,14 +404,16 @@ int srec_printbuffer(uint8_t *buffer, size_t size, uint8_t rectype, uint32_t add
 	char out[256];
 	bool empty;
 
-	assert(buffer);
+	if (F == NULL) F = stdout;
+
+	assert(buf);
 
 	if (rectype != 1 && rectype != 2 && rectype != 3) {
 		LOGE("Invalid record type %d.", rectype);
 		return E_ARGUMENT;
 	}
 
-	printf("S00700004B756A6965\n");
+	fprintf(F, "S00700004B756A6965\n");
 
 	for (bl = 0; bl < size; bl += 16) {
 		memset(out, 0x00, sizeof(out));
@@ -426,8 +428,8 @@ int srec_printbuffer(uint8_t *buffer, size_t size, uint8_t rectype, uint32_t add
 
 		empty = true;
 		for (i = 0; i < 16; i++) {
-			n += snprintf(out + n, sizeof(out) - n, "%02X", buffer[bl + i]);
-			if (buffer[bl + i] != 0xFF) empty = false;
+			n += snprintf(out + n, sizeof(out) - n, "%02X", buf[bl + i]);
+			if (buf[bl + i] != 0xFF) empty = false;
 		}
 
 		if (empty) continue;
@@ -442,10 +444,28 @@ int srec_printbuffer(uint8_t *buffer, size_t size, uint8_t rectype, uint32_t add
 		n += snprintf(out + n, sizeof(out) - n, "%02X", csum);
 		out[n] = '\0';
 
-		printf("%s\n", out);
+		fprintf(F, "%s\n", out);
 	}
 
 	return E_NONE;
+}
+
+int srec_writefilebin(uint8_t *buf, size_t size, const char *path, uint8_t rectype, uint32_t address) {
+	FILE *F = fopen(path, "w+");
+
+	if (F == NULL) {
+		LOGE("Could not open file '%s' for writing.", path);
+		return E_OPEN;
+	}
+
+	int rc = srec_printbuffer(buf, size, rectype, address, F);
+	fclose(F);
+
+	if (rc != E_NONE) {
+		LOGE("Error writing to file '%s'.", path);
+	}
+
+	return rc;
 }
 
 /** @} */

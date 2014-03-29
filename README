@@ -40,5 +40,5 @@ $ make doc
 To clean up everything in the source tree (before commit):
 $ make distclean
 
-To create a ZIP containing a freshly built executable and HTML documentation:
+To create a ZIP containing the source, freshly built executable and HTML documentation:
 $ make dist

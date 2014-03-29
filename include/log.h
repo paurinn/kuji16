@@ -108,6 +108,9 @@ int logg(enum logg_type type, const char *fmt, ...);
 /** Reference to the main log file. */
 extern FILE *flogg;
 
+/** Reference to path to main log file. */
+extern char *loggpath;
+
 /** Set this to a value from enum logg_type to allow output of that type and below. */
 extern int verbosity;
 

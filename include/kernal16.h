@@ -72,6 +72,7 @@ enum kernal16_resp {
 struct kernal16 {
 	struct serial serial;		/**< Serial communication. */
 	struct chipdef16 *chip;		/**< Current chip configuration. */
+	int clockid;				/**< Clock index. This also selectes bitrate of serial communication. */
 };
 
 /**
@@ -80,11 +81,12 @@ Opens up serial communication to com port.
 Chip definitions tell MCU configuration.
 @param state The dereferenced pointer will be assigned to the newly allocated kernal16 state.
 @param chip Chip definition.
+@param clockid Select clock frequency. This also selects the baud rates for stage 1 and 2.
 @param com_path Path to serial port. Either '\\\\\.\\COM1' in windows or '/dev/ttyUSB0' in Linux.
 @return On success, returns E_NONE.
 @return On failure, returns a negative error code.
 */
-int kernal16_new(struct kernal16 **state, struct chipdef16 *chip, char *com_path);
+int kernal16_new(struct kernal16 **state, struct chipdef16 *chip, int clockid, char *com_path);
 
 /**
 Free or close all associated resources and then free *state.

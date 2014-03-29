@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 const char *chipdef_filename = "chipdef16.ini";
 
 struct mcu16_tag mcu16_map[] = {
+	{NULL,					MCU16_INVALID},
 	{"MB90F334",			MCU16_MB90F334},
 	{"MB90F335A",			MCU16_MB90F335A},
 	{"MB90F337",			MCU16_MB90F337},
@@ -240,7 +241,7 @@ struct mcu16_tag mcu16_map[] = {
 
 int find_mcu16_by_name(char *s) {
 	int rc = 0;
-	for (int i = 0; mcu16_map[i].name; i++) {
+	for (int i = 1; mcu16_map[i].name; i++) {
 		if ((rc = strcasecmp(mcu16_map[i].name, s)) == 0) {
 			return mcu16_map[i].type;
 		}
@@ -249,7 +250,7 @@ int find_mcu16_by_name(char *s) {
 }
 
 const char *mcu16_name(enum mcu16_type type) {
-	for (int i = 0; mcu16_map[i].name; i++) {
+	for (int i = 1; mcu16_map[i].name; i++) {
 		if (mcu16_map[i].type == type) {
 			return mcu16_map[i].name;
 		}
@@ -259,7 +260,6 @@ const char *mcu16_name(enum mcu16_type type) {
 
 /** List of all available crystal frequencies. */
 int frequencies[N_FREQUENCY] = {
-	FREQ_INVALID,
 	FREQ_3MHZ,
 	FREQ_4MHZ,
 	FREQ_5MHz,
@@ -364,7 +364,7 @@ int process_chipdef() {
 						sscanf(seg, "%d", &cv);
 						cv *= 1000000;
 						chipdefs[id].clock[c] = cv;
-						//LOGD("\t%s.clock[%d] = %u", mcu16_name(id), c, chipdefs[id].clock[c]);
+						LOGD("\t%s.clock[%d] = %u", mcu16_name(id), c, chipdefs[id].clock[c]);
 					}
 				} else if (strcasecmp(key, "Baud") == 0) {
 					char *saveptr = value;
@@ -382,8 +382,20 @@ int process_chipdef() {
 						//LOGD("\t%s.bps[%d] = %u", mcu16_name(id), b, chipdefs[id].bps[b]);
 					}
 				} else if (strcasecmp(key, "Baud2") == 0) {
-					//enum bps bps2[N_BPS];			/**< Array of valid bit rates. FIXME, This is an extra list in the chipdef file, what does this do? */
-					//Ignored.
+					char *saveptr = value;
+					char *seg;
+					char *s = value;
+					int b = 0;
+					int br = 0;
+
+					for (b = 0; ; b++, s = NULL) {
+						seg = strtok_r(s, ",", &saveptr);
+						if (seg == NULL) break;
+						//NOTE, assuming value is megahertz
+						sscanf(seg, "%d", &br);
+						chipdefs[id].bps2[b] = br;
+						//LOGD("\t%s.bps[%d] = %u", mcu16_name(id), b, chipdefs[id].bps[b]);
+					}
 				}
 			} else {
 				//LOGD("Ignoring '%s'", s);

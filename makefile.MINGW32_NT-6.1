@@ -42,8 +42,8 @@ RESCFLAGS += -DDEBUGGING
 endif
 
 # Mingw specific compiler flags.
-CFLAGS += -D__WIN32__ -mms-bitfields -mconsole
+CFLAGS += -static -static-libgcc -D__WIN32__ -mms-bitfields -mconsole
 
 # Mingw specific linker flags.
-LDFLAGS	+= -L/usr/lib/w32api -lintl -lkernel32 -mms-bitfields -mconsole
+LDFLAGS	+= -static -static-libgcc -L/usr/lib/w32api -lintl -lkernel32 -mms-bitfields -mconsole
 

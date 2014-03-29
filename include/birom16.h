@@ -40,14 +40,9 @@ This module relies on @link serial @endlink to abstract serial port access from 
 
 /** Command identifiers. */
 enum birom16_cmdid {
-	BIROM16_CMD_OPEN	= 0x18,	/**< General communication check and communication initializer. MCU bootstrap responds with 0x11. */
+	BIROM16_CMD_PROBE	= 0x18,	/**< General communication check and communication initializer. MCU bootstrap responds with 0x11. */
 	BIROM16_CMD_WRITE	= 0x00,	/**< Write data to RAM. MCU responds with 0x01 on success and 0x02 on failure. */
-
-	/**
-	Jump to RAM_START.
-	NOTE: The address is fixed by built-in-ROM.
-	*/
-	BIROM16_CMD_CALL	= 0x40,
+	BIROM16_CMD_CALL	= 0x40, /**< Jump to RAM address. */
 };
 
 /** Response identifiers. */
@@ -55,6 +50,7 @@ enum birom16_respid {
 	BIROM16_RESP_INVALID	= 0x00, /**< Invalid response. Usually means time-out in communication. */
 	BIROM16_RESP_ACK		= 0x1,	/**< Command was received and was successful. */
 	BIROM16_RESP_NAK		= 0x2,	/**< Command was not fully received or command failed. */
+	BIROM16_RESP_PROBE		= 0x11,	/**< Acknowledge to BIROM16_CMD_PROBE. */
 };
 
 /**

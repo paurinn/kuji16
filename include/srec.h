@@ -73,15 +73,28 @@ void srec_freelist(struct srec **reclist);
 int srec_readfilebin(uint8_t **buf, const char *path, uint32_t address_low, uint32_t address_high);
 
 /**
-	Convert binary buffer to stdout as S-Records.
-	@param buffer The binary buffer.
+	Write binary buffer to file as S-Records.
+	@param buf The binary buffer.
 	@param size How many bytes in buffer[].
+	@param path Path to file that receives the S-Records.
 	@param rectype Type of data records (1, 2 or 3).
 	@param address The base address of the buffer.
 	@return On success, returns E_NONE.
 	@return On failure, returns a negative error code.
 */
-int srec_printbuffer(uint8_t *buffer, size_t size, uint8_t rectype, uint32_t address);
+int srec_writefilebin(uint8_t *buf, size_t size, const char *path, uint8_t rectype, uint32_t address);
+
+/**
+	Print binary buffer to stdout as S-Records.
+	@param buf The binary buffer.
+	@param size How many bytes in buffer[].
+	@param rectype Type of data records (1, 2 or 3).
+	@param address The base address of the buffer.
+	@param F Optional file pointer. If NULL then output goes to stdout.
+	@return On success, returns E_NONE.
+	@return On failure, returns a negative error code.
+*/
+int srec_printbuffer(uint8_t *buf, size_t size, uint8_t rectype, uint32_t address, FILE *F);
 
 #endif //__SREC_H__
 /** @} */

@@ -1,2 +1,12 @@
-v1.1 KS 09022014
-Added error return codes and verbosity to make this usable in an automated fashion.
+v1.1 - KS - 20140209
+	Added error return codes and verbosity to make this usable in an automated fashion.
+
+v1.2 - KS - 20140327
+	Changed to behave like kuji32 i.e. allow program to start and wait until board is powered up by user.
+	The way it was, the user had to power up board first and then start kuji16.
+	Call the load address instead of 0x0000.
+
+v1.3 - KS - 20140328
+	Fixed checks to prevent writing to an already full MCU.
+	Fixed program exit status.
+
