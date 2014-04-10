@@ -10,3 +10,6 @@ v1.3 - KS - 20140328
 	Fixed checks to prevent writing to an already full MCU.
 	Fixed program exit status.
 
+v1.4 - KS - 20140409
+	Fixed Linux version.
+	Relaxed timings to work with USB->RS232 converter, works with Prolific generic dongle.

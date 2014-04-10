@@ -57,23 +57,21 @@ enum birom16_respid {
 	Run-time state for birom16.
 */
 struct birom16_state {
-	struct chipdef16 *chipdef;		/**< Configuration of MCU such as crystal frequency, path to kernal file etc. */
-	struct serial serial;			/**< Serial communication object. */
-	int clockid;					/**< Clock index. This also selectes bitrate of serial communication. */
-	uint8_t *kernaldata;			/**< Contentes of kernal file. */
-	long kernalsize;				/**< Size of kernal file. */
+	struct chipdef16 *chip;		/**< Configuration of MCU such as crystal frequency, path to kernal file etc. */
+	struct serial *serial;		/**< Serial communication object. */
+	uint8_t *kernaldata;		/**< Contentes of kernal file. */
+	long kernalsize;			/**< Size of kernal file. */
 };
 
 /**
 	Allocate for a new birom16 state and initialize connection to the given serial port at the given baud rate.
 	@param state The dereferenced pointer is assigned to the newly allocated state.
-	@param chipdef Prepared chip definition describing the MCU being programmed.
-	@param clockid Frequency selector. Index into chipdef->clock[] and chipdef->bps[].
-	@param com_path Path to serial port. Either '\\\\\.\\COM1' in windows or '/dev/ttyUSB0' in Linux.
+	@param chip Prepared chip definition describing the MCU being programmed.
+	@param serial Serial port object.
 	@return On success, returns E_NONE.
 	@return On failure, returns a negative error code.
 */
-int birom16_new(struct birom16_state **state, struct chipdef16 *chipdef, int clockid, char *com_path);
+int birom16_new(struct birom16_state **state, struct chipdef16 *chip, struct serial *serial);
 
 /**
 	Close serial port and free the given birom16 state.

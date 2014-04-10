@@ -36,6 +36,8 @@ PREFIX ?= /usr/local
 
 EXT =.exe
 
+STAGEDIR = $(OUTPUT)_win
+
 # Select debugging or optimized compiler flags.
 ifeq ($(DEBUGGING), true)
 RESCFLAGS += -DDEBUGGING

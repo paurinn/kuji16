@@ -74,7 +74,7 @@ int logg(enum logg_type type, const char *fmt, ...) {
 	if (flogg == NULL)  {
 		flogg = fopen(loggpath, "w+");
 		if (flogg == NULL) {
-			fprintf(stderr, "Could not open file '%s' for writing.", loggpath);
+			fprintf(stderr, "Could not open file 'main.log' for writing.");
 		}
 	}
 
@@ -82,7 +82,7 @@ int logg(enum logg_type type, const char *fmt, ...) {
 		return E_OPEN;
 	}
 
-	timestamp(ts);
+	timestamp(ts, sizeof(ts), 0);
 	ts[22] = '\0';
 
 	va_start(ap, fmt);
@@ -91,18 +91,18 @@ int logg(enum logg_type type, const char *fmt, ...) {
 		case LOGG_DEBUG:
 			if (verbosity < LOGG_DEBUG) return 0;
 #ifdef DEBUGGING
-			asprintf(&fmtbuf, MAGENTA"[%s](%s:%d)[DBG]: %s\n"NORM, ts, file, line, fmt);
+			n = asprintf(&fmtbuf, MAGENTA"[%s](%s:%d)[DBG]: %s\n"NORM, ts, file, line, fmt);
 #else
-			asprintf(&fmtbuf, MAGENTA"[DBG]: %s\n"NORM, fmt);
+			n = asprintf(&fmtbuf, MAGENTA"[DBG]: %s\n"NORM, fmt);
 #endif
 			n = vasprintf(&obuf, fmtbuf, ap);
 			break;
 		case LOGG_INFO:
 			if (verbosity < LOGG_INFO) return 0;
 #ifdef DEBUGGING
-			asprintf(&fmtbuf, WHITE"[%s](%s:%d)[INF]: %s\n"NORM, ts, file, line, fmt);
+			n = asprintf(&fmtbuf, WHITE"[%s](%s:%d)[INF]: %s\n"NORM, ts, file, line, fmt);
 #else
-			asprintf(&fmtbuf, WHITE"[INF]: %s\n"NORM, fmt);
+			n = asprintf(&fmtbuf, WHITE"[INF]: %s\n"NORM, fmt);
 #endif
 
 			n = vasprintf(&obuf, fmtbuf, ap);
@@ -110,18 +110,18 @@ int logg(enum logg_type type, const char *fmt, ...) {
 		case LOGG_WARNING:
 			if (verbosity < LOGG_WARNING) return 0;
 #ifdef DEBUGGING
-			asprintf(&fmtbuf, YELLOW"[%s](%s:%d)[WRN]: %s\n"NORM, ts, file, line, fmt);
+			n = asprintf(&fmtbuf, YELLOW"[%s](%s:%d)[WRN]: %s\n"NORM, ts, file, line, fmt);
 #else
-			asprintf(&fmtbuf, YELLOW"[WRN]: %s\n"NORM, fmt);
+			n = asprintf(&fmtbuf, YELLOW"[WRN]: %s\n"NORM, fmt);
 #endif
 			n = vasprintf(&obuf, fmtbuf, ap);
 			break;
 		case LOGG_ERROR:
 			if (verbosity < LOGG_ERROR) return 0;
 #ifdef DEBUGGING
-			asprintf(&fmtbuf, RED"[%s](%s:%d)[ERR]: %s\n"NORM, ts, file, line, fmt);
+			n = asprintf(&fmtbuf, RED"[%s](%s:%d)[ERR]: %s\n"NORM, ts, file, line, fmt);
 #else
-			asprintf(&fmtbuf, RED"[ERR]: %s\n"NORM, fmt);
+			n = asprintf(&fmtbuf, RED"[ERR]: %s\n"NORM, fmt);
 #endif
 			n = vasprintf(&obuf, fmtbuf, ap);
 			break;
@@ -136,8 +136,8 @@ int logg(enum logg_type type, const char *fmt, ...) {
 	fflush(flogg);
 
 #ifdef CONSOLE
-	fwrite(obuf, n, 1, stdout);
-	fflush(stdout);
+	fwrite(obuf, n, 1, stderr);
+	fflush(stderr);
 #endif
 
 	free(fmtbuf);
@@ -167,15 +167,15 @@ int loggr(const char *fmt, ...) {
 	}
 
 	va_start(ap, fmt);
-	asprintf(&fmtbuf, "%s", fmt);
+	n = asprintf(&fmtbuf, "%s", fmt);
 	n = vasprintf(&obuf, fmtbuf, ap);
 
 	fwrite(obuf, n, 1, flogg);
 	fflush(flogg);
 
 #ifdef CONSOLE
-	fwrite(obuf, n, 1, stdout);
-	fflush(stdout);
+	fwrite(obuf, n, 1, stderr);
+	fflush(stderr);
 #endif
 
 	free(fmtbuf);
@@ -202,13 +202,9 @@ void logg_hex(uint8_t *data, size_t size) {
 		flogg = fopen(loggpath, "w+");
 		if (flogg == NULL) {
 			LOGE("Could not open file '%s' for writing.", loggpath);
+			return;
 		}
 	}
-
-	if (flogg == NULL) {
-		return;
-	}
-
 
 	for(n = 1; n <= size; n++) {
 		if (n % 16 == 1) {
@@ -232,7 +228,7 @@ void logg_hex(uint8_t *data, size_t size) {
 		if (n % 16 == 0) {
 			/* line completed */
 			fprintf(flogg, "[%4.4s] %-50.50s |%-16.16s|\n", addrstr, hexstr, charstr);
-			fprintf(stdout, "[%4.4s] %-50.50s |%-16.16s|\n", addrstr, hexstr, charstr);
+			fprintf(stderr, "[%4.4s] %-50.50s |%-16.16s|\n", addrstr, hexstr, charstr);
 			hexstr[0] = 0;
 			charstr[0] = 0;
 		} else if (n % 8 == 0) {
@@ -246,11 +242,10 @@ void logg_hex(uint8_t *data, size_t size) {
 	if (strlen(hexstr) > 0) {
 		/* print rest of buffer if not empty */
 		fprintf(flogg, "[%4.4s] %-50.50s |%-16.16s|\n", addrstr, hexstr, charstr);
-		fprintf(stdout, "[%4.4s] %-50.50s |%-16.16s|\n", addrstr, hexstr, charstr);
+		fprintf(stderr, "[%4.4s] %-50.50s |%-16.16s|\n", addrstr, hexstr, charstr);
 	}
 
 	fflush(flogg);
-	fflush(stdout);
 }
 
 /** @} */

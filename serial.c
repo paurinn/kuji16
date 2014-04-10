@@ -60,6 +60,8 @@ int serial_isopen(struct serial *serial) {
 //URI example for windows:	"\\.\COM1:9600:8N1".
 //URI example for Linux:	"/dev/ttyS0:9600:8N1".
 int serial_open(struct serial *serial, char *uri) {
+	assert(serial);
+
 	sscanf(uri, "%255[^:]:%d:%d%c%d", serial->address, &serial->baudrate, &serial->bytesize, &serial->parity, &serial->stopbits);
 
 #ifdef __WIN32__
@@ -114,12 +116,12 @@ int serial_open(struct serial *serial, char *uri) {
 
 	COMMTIMEOUTS timeouts;
 	memset(&timeouts, 0x00, sizeof(timeouts));
-	timeouts.ReadIntervalTimeout=250;
-	timeouts.ReadTotalTimeoutMultiplier=100;
-	timeouts.ReadTotalTimeoutConstant=500;
+	timeouts.ReadIntervalTimeout=25;
+	timeouts.ReadTotalTimeoutMultiplier=10;
+	timeouts.ReadTotalTimeoutConstant=50;
 
-	timeouts.WriteTotalTimeoutConstant=50;
-	timeouts.WriteTotalTimeoutMultiplier=10;
+	timeouts.WriteTotalTimeoutConstant=100;
+	timeouts.WriteTotalTimeoutMultiplier=20;
 	if (!SetCommTimeouts(serial->fd, &timeouts)){
 		return E_SETOPTION;
 	}
@@ -127,32 +129,27 @@ int serial_open(struct serial *serial, char *uri) {
 	//Purge both input and output buffers.
 	PurgeComm (serial->fd, PURGE_TXCLEAR | PURGE_RXCLEAR);
 #else
-	int pflags = O_NOCTTY | O_NONBLOCK | O_RDWR;
-
 	if (serial->fd > 0) {
+		tcdrain(serial->fd);
 		serial_close(serial);
 	}
 
-	serial->fd = open(serial->address, pflags);
+	serial->fd = open(serial->address, O_RDWR);
 	if (serial->fd < 0) {
 		return E_OPEN;
 	}
 
+	/**
+		NOTE: These settings along with select() before read() are
+		the only configuration I got to work on Linux.
+	*/
 	struct termios termios;
 	tcgetattr(serial->fd, &termios);
 
-	//FIXME, set parity and bytesize!
-	termios.c_cflag = CS8 | CLOCAL | CREAD;
-	termios.c_iflag = IGNPAR;// | ICRNL;
-	termios.c_oflag = 0;
-	termios.c_lflag &= ~ICANON; /* Set non-canonical mode */
-
-	//Set non-blocking.
-	termios.c_cc[VTIME] = 0;
-	termios.c_cc[VMIN] = 100;
-
 	cfsetispeed(&termios, com_bps_mask(serial->baudrate));
 	cfsetospeed(&termios, com_bps_mask(serial->baudrate));
+	cfmakeraw(&termios);
+	termios.c_cc[VTIME] = 255;
 
 	if (tcsetattr(serial->fd, TCSANOW, &termios) < 0) {
 		LOGE("Could not set serial attributes!");
@@ -160,14 +157,16 @@ int serial_open(struct serial *serial, char *uri) {
 	}
 #endif
 
-	LOGD("[Serial] Opening '%s' %d:%d%c%d", serial->address, serial->baudrate, serial->bytesize, serial->parity, serial->stopbits);
-
+	LOGD("Opened '%s:%d:%d:%c:%d'.", serial->address, serial->baudrate, serial->bytesize, serial->parity, serial->stopbits);
 	return E_NONE;
 }
 
 int serial_readln(struct serial *serial, uint8_t *buffer, int count) {
 	int i, n = 0;
 	double timeout = 0.1;
+
+	assert(serial);
+	assert(buffer);
 
 	timeout += get_ticks();
 	for (i = 0; i < count; i++) {
@@ -192,47 +191,51 @@ int serial_readln(struct serial *serial, uint8_t *buffer, int count) {
 }
 
 void serial_close(struct serial *serial) {
+	assert(serial);
+
 #ifdef __WIN32__
 	if (serial && serial->fd != INVALID_HANDLE_VALUE) {
 		CloseHandle(serial->fd);
 		serial->fd = INVALID_HANDLE_VALUE;
+		LOGD("Closed '%s'.", serial->address);
 	}
 #else
 	if (serial->fd > 0) {
 		close(serial->fd);
 		serial->fd = -1;
+		LOGD("Closed '%s'.", serial->address);
 	}
 #endif
 }
 
 int serial_read(struct serial *serial, uint8_t *buffer, int count) {
+	assert(serial);
+	assert(buffer);
+
 #ifdef __WIN32__
-	if (serial->fd == INVALID_HANDLE_VALUE) {
-		LOGE("Error: Serial port not open!");
-		return E_NOTOPEN;
-	}
+	if (serial->fd == INVALID_HANDLE_VALUE) return E_NOTOPEN;
 	DWORD n = 0;
 	if(!ReadFile(serial->fd, buffer, count, &n, NULL)){
-		LOGE("Error %d reading from serial port!", GetLastError());
 		return E_READ;
 	}
 #else
-	if (serial->fd < 0) {
-		LOGE("Error: Serial port not open!");
-		return E_NOTOPEN;
-	}
 	int n = 0;
-	double timeout = get_ticks() + 0.5;
-	while (get_ticks() < timeout) {
-		n = read(serial->fd, buffer, count);
-		if (n < 0) {
-			if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
-				msleep(1);
-				continue;
-			}
-			LOGE("Error %d reading from serial port!", errno);
-			return (E_READ);
-		}
+	int r;
+	fd_set rfds;
+	struct timeval tv;
+
+	if (serial->fd < 0) return E_NOTOPEN;
+
+	while (count) {
+		FD_ZERO(&rfds);
+		FD_SET(serial->fd, &rfds);
+		tv.tv_sec = 0;
+		tv.tv_usec = 50000;
+		r = select(serial->fd + 1, &rfds, NULL, NULL, &tv);
+		if (r <= 0) return r;
+		r = read(serial->fd, buffer + n, count);
+		n += r;
+		count -= r;
 	}
 #endif
 
@@ -240,34 +243,29 @@ int serial_read(struct serial *serial, uint8_t *buffer, int count) {
 		LOGI("[%s READ]", serial->address);
 		logg_hex(buffer, n);
 	}
+
 	return n;
 }
 
 int serial_write(struct serial *serial, uint8_t *buffer, int count) {
+	assert(serial);
+	assert(buffer);
+
 #ifdef __WIN32__
-	if (serial->fd == INVALID_HANDLE_VALUE) {
-		LOGE("Error: Serial port not open!");
-		return E_NOTOPEN;
-	}
+	if (serial->fd == INVALID_HANDLE_VALUE) return E_NOTOPEN;
 	DWORD n = 0;
 	if (!WriteFile(serial->fd, buffer, count, &n, NULL)) {
-		LOGE("Error %d writing to serial port.", GetLastError());
 		return E_WRITE;
 	}
 #else
-	if (serial->fd < 0) {
-		LOGE("Error: Serial port not open!");
-		return E_NOTOPEN;
-	}
-
+	if (serial->fd < 0) return E_NOTOPEN;
 	int n;
 	if ((n = write(serial->fd, buffer, count)) < count) {
-		LOGE("Error %d writing to serial port.", errno);
 		return E_WRITE;
 	}
 #endif
 
-	if (serial->debug && n > 0) {
+	if (serial->debug) {
 		LOGI("[%s WRITE]", serial->address);
 		logg_hex(buffer, n);
 	}
@@ -277,30 +275,25 @@ int serial_write(struct serial *serial, uint8_t *buffer, int count) {
 
 //Write a C string to serial port.
 int serial_puts(struct serial *serial, char *line) {
+	assert(serial);
+	assert(line);
+
 #ifdef __WIN32__
-	if (serial->fd == INVALID_HANDLE_VALUE) {
-		LOGE("Error: Serial port not open!");
-		return E_NOTOPEN;
-	}
+	if (serial->fd == INVALID_HANDLE_VALUE) return E_NOTOPEN;
 	DWORD n = 0;
 	if (!WriteFile(serial->fd, line, strlen(line), &n, NULL)) {
-		LOGE("Error %s writing to serial port.", GetLastError());
 		return E_WRITE;
 	}
 #else
-	if (serial->fd < 0) {
-		LOGE("Error: Serial port not open!");
-		return E_NOTOPEN;
-	}
+	if (serial->fd < 0) return E_NOTOPEN;
 	int n;
 	if ((n = write(serial->fd, line, strlen(line))) < 0) {
-		LOGE("Error %s writing to serial port.", errno);
 		return E_WRITE;
 	}
 #endif
 
 	if (serial->debug) {
-		LOGI("[%s WRITE] '%s'", serial->address, line);
+		LOGD("[%s WRITE] '%s'", serial->address, line);
 	}
 
 	return n;
@@ -308,6 +301,8 @@ int serial_puts(struct serial *serial, char *line) {
 
 //Purge both input and output buffers.
 int serial_purge(struct serial *serial) {
+	assert(serial);
+
 #ifdef __WIN32__
 	PurgeComm (serial->fd, PURGE_TXCLEAR | PURGE_RXCLEAR);
 #else
@@ -318,13 +313,47 @@ int serial_purge(struct serial *serial) {
 
 //Wait until all output data has been written.
 int serial_drain(struct serial *serial) {
+	assert(serial);
+
 #ifdef __WIN32__
 	FlushFileBuffers(serial->fd);
 #else
-	LOGD("Draining %d", serial->fd);
 	tcdrain(serial->fd);
-	sync();
 #endif
+	return E_NONE;
+}
+
+int serial_setbaud(struct serial *serial, int newbaud) {
+	assert(serial);
+
+#ifdef __WIN32__
+	DCB dcbSerialParams;
+	memset(&dcbSerialParams, 0x00, sizeof(dcbSerialParams));
+	dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+	if (!GetCommState(serial->fd, &dcbSerialParams)) {
+		return E_SETOPTION;
+	}
+
+	dcbSerialParams.BaudRate = newbaud;
+	if (!SetCommState(serial->fd, &dcbSerialParams)){
+		LOGE("Error %d: Could not set serial attributes!", GetLastError());
+		return E_SETOPTION;
+	}
+#else
+	struct termios termios;
+	tcgetattr(serial->fd, &termios);
+
+	cfsetispeed(&termios, com_bps_mask(newbaud));
+	cfsetospeed(&termios, com_bps_mask(newbaud));
+
+	if (tcsetattr(serial->fd, TCSANOW, &termios) < 0) {
+		LOGE("Error %d: Could not set serial attributes!", errno);
+		return E_SETOPTION;
+	}
+#endif
+
+	serial->baudrate = newbaud;
+	LOGD("Parameters changed to '%s:%d:%d%c%d'.", serial->address, serial->baudrate, serial->bytesize, serial->parity, serial->stopbits);
 	return E_NONE;
 }
 

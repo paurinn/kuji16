@@ -160,6 +160,7 @@ Do it all in one step:
 <li>MB90F867E/ES
 <li>MB90F882
 <li>MB90F883/A/B
+<li>MB90F883C
 <li>MB90F884/A/B/C
 <li>MB90F897/S
 <li>MB90F912
@@ -259,6 +260,7 @@ enum mcu16_type {
 	MCU16_MB90F867E,
 	MCU16_MB90F882,
 	MCU16_MB90F883A,
+	MCU16_MB90F883C,
 	MCU16_MB90F884A,
 	MCU16_MB90F897S,
 	MCU16_MB90F912,
@@ -355,7 +357,7 @@ The global array chipdefs[] receives the processed data.
 @return On success, returns E_NONE.
 @return On failure, returns a negative error code.
 */
-int process_chipdef();
+int process_chipdef16();
 
 /**
 	Find MCU type by name.

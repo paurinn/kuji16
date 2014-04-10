@@ -68,7 +68,7 @@ CFLAGS += -DREVISION=$(SVNREVISION) -DBUILD_TIMESTAMP=$(shell date '+%s') -DMAJO
 
 # Select debugging or optimized compiler flags.
 ifeq ($(DEBUGGING), true)
-CFLAGS += -O0 -g3 -ggdb3 -DDEBUGGING
+CFLAGS += -O0 -g -DDEBUGGING
 else
 CFLAGS += -O3
 endif
@@ -76,6 +76,7 @@ endif
 INSTALLDIR = $(PREFIX)/bin
 
 #Stage directory is used to build a zip package of the final binary + documentation.
+#This can be overwritten by platform specific makefile.
 STAGEDIR = $(OUTPUT)_stage
 
 #Name of zipped file with executable and documentation.
@@ -85,7 +86,7 @@ CLEANFILES += $(OUTPUT)$(EXT) *.core gmon.out $(OBJS) $(OUTPUT).sha1 $(EXTRACLEA
 MRPROPERFILES += $(CLEANFILES) doc/latex *.log
 DISTCLEANFILES += $(MRPROPERFILES) html $(STAGEDIR) $(ZIPOUT) kernal16/m_flash.* chipdef16.ini
 
-STAGEFILES += $(OUTPUT)$(EXT) *.c include Makefile makefile.* doc html LICENSE README VERSION HISTORY
+STAGEFILES += $(OUTPUT)$(EXT) html LICENSE README VERSION doc *.c include Makefile makefile.* buildcounter.lua
 
 #Include system specific Makefile. This is based on kernel name from 'uname -s'.
 #The basic declarations can be overwritten to suit each system.
@@ -141,14 +142,12 @@ cloc:
 	cloc .
 
 dist: distclean buildcounter cloc $(RCOBJ) $(OUTPUT)$(EXT) doc
-	$(AT)$(MKDIR) -p $(STAGEDIR)/source
-	$(AT)$(CP) -r include Makefile makefile.* VERSION $(SRCS) $(STAGEDIR)/source
+	$(AT)mkdir -p $(STAGEDIR)
 	$(AT)$(CP) -r $(STAGEFILES) $(STAGEDIR)
 	$(ECHO) "[ZIP] $(STAGEFILES) > $(ZIPOUT)"
 	$(AT)$(ZIP) -qr9 $(ZIPOUT) $(STAGEDIR)
 
 prep:
-	$(AT)$(MKDIR) -p kernal16
 	$(AT)$(CP) /c/Program\ Files\ \(x86\)/FUJITSU/FUJITSU\ FLASH\ MCU\ Programmer/FMC16LX/m_flash.* kernal16/
 	$(AT)$(CP) /c/Program\ Files\ \(x86\)/FUJITSU/FUJITSU\ FLASH\ MCU\ Programmer/FMC16LX/CHIPDEF.INI chipdef16.ini
 

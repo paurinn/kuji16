@@ -126,6 +126,15 @@ int serial_purge(struct serial *serial);
 */
 int serial_drain(struct serial *serial);
 
+/**
+	Change to a new baud-rate.
+	@param serial The serial state to change.
+	@param newbaud The new baud rate.
+	@return On success, returns E_NONE.
+	@return On failure, returns a negative error code.
+*/
+int serial_setbaud(struct serial *serial, int newbaud);
+
 #endif //__SERIAL_H__
 /** @} */
 

@@ -35,7 +35,12 @@ struct version version = {
 /** Version as a C string. */
 const char *version_string() {
 	static char _version_string[255];
-	snprintf(_version_string, sizeof(_version_string), "%s v%d.%d.%d-%d Stardate %ld", version.text, version.major, version.minor, version.revision, version.build, (long)version.build_date);
+	static char _build_timestring[50];
+
+	if (_version_string[0] == '\0') {
+		timestamp(_build_timestring, sizeof(_build_timestring), BUILD_TIMESTAMP);
+		snprintf(_version_string, sizeof(_version_string), "%s v%d.%d.%d-%d (%s)", version.text, version.major, version.minor, version.revision, version.build, _build_timestring);
+	}
 	return _version_string;
 }
 

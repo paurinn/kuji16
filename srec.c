@@ -413,7 +413,8 @@ int srec_printbuffer(uint8_t *buf, size_t size, uint8_t rectype, uint32_t addres
 		return E_ARGUMENT;
 	}
 
-	fprintf(F, "S00700004B756A6965\n");
+	//{48,44,52} == "HDR".
+	fprintf(F, "S00600004844521B\n");
 
 	for (bl = 0; bl < size; bl += 16) {
 		memset(out, 0x00, sizeof(out));

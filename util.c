@@ -321,15 +321,20 @@ int asprintf(char **ret, const char *format, ...) {
 }
 #endif
 
-int timestamp(char *dest) {
+int timestamp(char *dest, uint8_t size, time_t tim) {
 	int n;
 
 #ifdef __WIN32__
 	struct _SYSTEMTIME st;
 	GetSystemTime(&st);
-	n = sprintf(dest, "%02d.%02d.%04d %02d:%02d:%02d+%02d", st.wDay, st.wMonth, st.wYear, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+	n = snprintf(dest, size, "%02d.%02d.%04d %02d:%02d:%02d+%02d", st.wDay, st.wMonth, st.wYear, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 #else
-	n = sprintf(dest, "%.6f", get_ticks());
+	struct tm tm;
+	if (tim == 0) {
+		tim = time(NULL);
+	}
+	gmtime_r(&tim, &tm);
+	n = strftime(dest, size, "%FT%T", &tm);
 #endif
 
 	return n;

@@ -218,6 +218,7 @@ struct mcu16_tag mcu16_map[] = {
 	{"MB90F883/A/B",		MCU16_MB90F883A},
 	{"MB90F883A",			MCU16_MB90F883A},
 	{"MB90F883B",			MCU16_MB90F883A},
+	{"MB90F883C",			MCU16_MB90F883C},
 	{"MB90F884/A/B/C",		MCU16_MB90F884A},
 	{"MB90F884A",			MCU16_MB90F884A},
 	{"MB90F884B",			MCU16_MB90F884A},
@@ -246,7 +247,7 @@ int find_mcu16_by_name(char *s) {
 			return mcu16_map[i].type;
 		}
 	}
-	return E_NOTFOUND;
+	return 0;
 }
 
 const char *mcu16_name(enum mcu16_type type) {
@@ -273,12 +274,30 @@ int frequencies[N_FREQUENCY] = {
 };
 
 /**
+This is the default baudrate series in case chipdef16.ini does not provide a Baud2 series.
+@note This probably needs changing.
+*/
+enum bps default_bps_series[N_FREQUENCY] = {
+	BPS_9600,
+	BPS_9600,
+	BPS_9600,
+	BPS_9600,
+	BPS_9600,
+	BPS_9600,
+	BPS_9600,
+	BPS_9600,
+	BPS_9600,
+	BPS_9600,
+};
+
+
+/**
 	Holds configuration for each 16 bit MCU type.
 	This array is initialized with data from 'chipdef16.ini'.
 */
 struct chipdef16 chipdefs[MAX_MCU16_TYPE];
 
-int process_chipdef() {
+int process_chipdef16() {
 	FILE *F = NULL;
 	char *s;
 	char line[256];
@@ -286,6 +305,8 @@ int process_chipdef() {
 	char value[256];
 	int id = 0;
 	int rc;
+
+	memset(chipdefs, 0x00, sizeof(chipdefs));
 
 	F = fopen(chipdef_filename, "r");
 	if (F == NULL) {
@@ -299,10 +320,22 @@ int process_chipdef() {
 		if (s && s[0] == '[' && s[strlen(s) - 1] == ']') {
 			s++;
 			s[strlen(s) - 1] = '\0';
+
+			//If already in MCU section we check if Baud2 is valid. If not, use a default_bps_series[].
+			if (id) {
+				for (int i = 0; chipdefs[id].bps[i] > 0; i++) {
+					if (chipdefs[id].bps2[i] == 0) {
+						chipdefs[id].bps2[i] = default_bps_series[i];
+						//LOGW("Fixing bps2[%d] = %d", i, default_bps_series[i]);
+					}
+				}
+			}
+
 			id = find_mcu16_by_name(s);
 			if (id) {
 				chipdefs[id].mcu = id;
 				strncpy(chipdefs[id].name, s, sizeof(chipdefs[id].name) - 1);
+				//LOGI("Processing [%s]", chipdefs[id].name);
 			} else {
 				LOGE("Unknown chipdef heading: '%s'", s);
 				strncpy(chipdefs[id].name, "Unknown", sizeof(chipdefs[id].name) - 1);
@@ -317,7 +350,7 @@ int process_chipdef() {
 				if (strcasecmp(key, "DownloadFile") == 0) {
 					//Base name of the kernal file aka stage 2 boot loader.
 					strncpy(chipdefs[id].kernal, value, sizeof(chipdefs[id].kernal) - 1);
-					//LOGD("\t%s.kernal = %s", mcu16_name(id), chipdefs[id].kernal);
+					//LOGI("\t%s.kernal = %s", chipdefs[id].name, chipdefs[id].kernal);
 				} else if (strcasecmp(key, "LoadAddress") == 0) {
 					//Where in RAM to store stage 2 binary. This is usually 0x0990 or 0x0190.
 					chipdefs[id].address_load = strtoint32(value, 16, &rc);
@@ -325,7 +358,7 @@ int process_chipdef() {
 						LOGE("Conversion error on entry '%s' = '%s' is not a hexadecimal number.", key, value);
 						continue;
 					}
-					//LOGD("\t%s.address_load = 0x%X", mcu16_name(id), chipdefs[id].address_load);
+					//LOGI("\t%s.address_load = 0x%X", chipdefs[id].name, chipdefs[id].address_load);
 				} else if (strcasecmp(key, "StartAddress") == 0) {
 					//uint16_t flash_start;			/**< Where in FLASH to store user firmware. */
 					chipdefs[id].flash_start = strtoint32(value, 16, &rc);
@@ -333,7 +366,7 @@ int process_chipdef() {
 						LOGE("Conversion error on entry '%s' = '%s' is not a hexadecimal number.", key, value);
 						continue;
 					}
-					//LOGD("\t%s.flash_start = 0x%X", mcu16_name(id), chipdefs[id].flash_start);
+					//LOGI("\t%s.flash_start = 0x%X", chipdefs[id].name, chipdefs[id].flash_start);
 				} else if (strcasecmp(key, "EndAddress") == 0) {
 					//uint16_t flash_end;				/**< Last address of flash. */
 					chipdefs[id].flash_end = strtoint32(value, 16, &rc);
@@ -341,7 +374,7 @@ int process_chipdef() {
 						LOGE("Conversion error on entry '%s' = '%s' is not a hexadecimal number.", key, value);
 						continue;
 					}
-					//LOGD("\t%s.flash_end = 0x%X", mcu16_name(id), chipdefs[id].flash_end);
+					//LOGI("\t%s.flash_end = 0x%X", chipdefs[id].name, chipdefs[id].flash_end);
 				} else if (strcasecmp(key, "FlashSize") == 0) {
 					//uint16_t flash_size;			/**< Flash size (flash_end - flash_start). */
 					chipdefs[id].flash_size = strtoint32(value, 16, &rc);
@@ -349,7 +382,7 @@ int process_chipdef() {
 						LOGE("Conversion error on entry '%s' = '%s' is not a hexadecimal number.", key, value);
 						continue;
 					}
-					//LOGD("\t%s.flash_size = 0x%X", mcu16_name(id), chipdefs[id].flash_size);
+					//LOGI("\t%s.flash_size = 0x%X", chipdefs[id].name, chipdefs[id].flash_size);
 				} else if (strcasecmp(key, "Clock") == 0) {
 					char *saveptr = value;
 					char *seg;
@@ -364,7 +397,7 @@ int process_chipdef() {
 						sscanf(seg, "%d", &cv);
 						cv *= 1000000;
 						chipdefs[id].clock[c] = cv;
-						LOGD("\t%s.clock[%d] = %u", mcu16_name(id), c, chipdefs[id].clock[c]);
+						//LOGI("\t%s.clock[%d] = %u", chipdefs[id].name, c, chipdefs[id].clock[c]);
 					}
 				} else if (strcasecmp(key, "Baud") == 0) {
 					char *saveptr = value;
@@ -379,7 +412,7 @@ int process_chipdef() {
 						//NOTE, assuming value is megahertz
 						sscanf(seg, "%d", &br);
 						chipdefs[id].bps[b] = br;
-						//LOGD("\t%s.bps[%d] = %u", mcu16_name(id), b, chipdefs[id].bps[b]);
+						//LOGI("\t%s.bps[%d] = %u", chipdefs[id].name, b, chipdefs[id].bps[b]);
 					}
 				} else if (strcasecmp(key, "Baud2") == 0) {
 					char *saveptr = value;
@@ -394,11 +427,11 @@ int process_chipdef() {
 						//NOTE, assuming value is megahertz
 						sscanf(seg, "%d", &br);
 						chipdefs[id].bps2[b] = br;
-						//LOGD("\t%s.bps[%d] = %u", mcu16_name(id), b, chipdefs[id].bps[b]);
+						//LOGI("\t%s.bps2[%d] = %u", chipdefs[id].name, b, chipdefs[id].bps[b]);
 					}
 				}
 			} else {
-				//LOGD("Ignoring '%s'", s);
+				//LOGW("Ignoring '%s'", s);
 			}
 		}
 	}

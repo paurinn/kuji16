@@ -1,4 +1,4 @@
-#!lua
+#!/usr/bin/lua
 
 --[[
 Kuji16 Flash MCU Programmer
