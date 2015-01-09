@@ -22,6 +22,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "stdafx.h"
 
+#ifdef __WIN32__
+#include "resource.h"
+#endif
+
 /**
 Selects verbosity level.
 See enum logg_type for valid values.
@@ -89,10 +93,10 @@ int logg(enum logg_type type, const char *fmt, ...) {
 
 	switch (type) {
 		case LOGG_DEBUG:
-			if (verbosity < LOGG_DEBUG) return 0;
 #ifdef DEBUGGING
 			n = asprintf(&fmtbuf, MAGENTA"[%s](%s:%d)[DBG]: %s\n"NORM, ts, file, line, fmt);
 #else
+			if (verbosity < LOGG_DEBUG) return 0;
 			n = asprintf(&fmtbuf, MAGENTA"[DBG]: %s\n"NORM, fmt);
 #endif
 			n = vasprintf(&obuf, fmtbuf, ap);
@@ -135,7 +139,13 @@ int logg(enum logg_type type, const char *fmt, ...) {
 	fwrite(obuf, n, 1, flogg);
 	fflush(flogg);
 
-#ifdef CONSOLE
+#ifdef __WIN32__
+	{
+		extern HWND hwndDlg;
+		HWND w = GetDlgItem(hwndDlg, IDC_LBLSTATUS);
+		SetWindowText(w, obuf);
+	}
+#else
 	fwrite(obuf, n, 1, stderr);
 	fflush(stderr);
 #endif
@@ -173,7 +183,13 @@ int loggr(const char *fmt, ...) {
 	fwrite(obuf, n, 1, flogg);
 	fflush(flogg);
 
-#ifdef CONSOLE
+#ifdef __WIN32__
+	{
+		extern HWND hwndDlg;
+		HWND w = GetDlgItem(hwndDlg, IDC_LBLSTATUS);
+		SetWindowText(w, obuf);
+	}
+#else
 	fwrite(obuf, n, 1, stderr);
 	fflush(stderr);
 #endif

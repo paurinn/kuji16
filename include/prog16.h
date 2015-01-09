@@ -42,8 +42,9 @@ Both stage 1 and 2 use CRC16.
 -V           Print application version and exit.
 -d           Hex-dump communication to stdout.
 -v           Select verbosity level: 0-none, 1-errors, 2-warnings, 3-info, 4-debug.
--m \<mcu\>     Select MCU by name e.g. 'mb90f598g'. Case-insensitive.
--c \<freq\>    Select target crystal (megahertz) e.g 4, 8, 16 etc.
+-m \<mcu\>   Select MCU by name e.g. 'mb90f598g'. Case-insensitive.
+-c \<freq\>  Select target crystal (megahertz) e.g 4, 8, 16 etc.
+-t \<sec\>   Discovery time-out in seconds.
 -e           Erase MCU flash.
 -b           Blank check and return immediately after.
 -r           Read MCU flash and write it to stdout as S-Records.
@@ -173,6 +174,7 @@ Do it all in one step:
 <li>MB90F952
 <li>MB90F962
 <li>MB90F983
+<li>MB90F931/S
 <li>MB90F997
 </ul>
 
@@ -273,6 +275,7 @@ enum mcu16_type {
 	MCU16_MB90F952,
 	MCU16_MB90F962,
 	MCU16_MB90F983,
+	MCU16_MB90F931S,
 	MCU16_MB90F997,
 	//--
 	MAX_MCU16_TYPE		/**< Sentinel. */
@@ -374,6 +377,45 @@ int find_mcu16_by_name(char *s);
 	@return On failure i.e. invalid type, returns NULL.
 */
 const char *mcu16_name(enum mcu16_type type);
+
+/** This structure contains the results of command line argument parser. */
+struct params16 {
+	char *argstr;			/**< Control string for getopt(). */
+	char *srecpath;			/**< Parameter given to '-w'. */
+	char *savepath;			/**< Parameter given to '-r'. */
+	char *comarg;			/**< Parameter given to '-p'. */
+
+	bool erase;				/**< User requested erase with '-e'. */
+	bool read;				/**< User requested read with '-r'. */
+	bool write;				/**< User requested write with '-w'. */
+	bool blankcheck;		/**< User requested blank with '-b'. */
+	bool debugging;			/**< User requested debugging output with '-d'. */
+
+	int timeoutsec;			/**< Parameter given to '-t'. */
+	enum frequency freq;	/**< Currently selected target crystal frequency. */
+	struct chipdef16 *chip;	/**< MCU descriptor. */
+	int freqid;				/**< Index into chip->clock[], chip->bps[] and chip->bps2[]. */
+};
+
+/**
+Process parameters.
+The parameters are prepared by command line or GUI.
+@param argc Argument count.
+@param argv Argument vector.
+@param params Destination for the parsed parameters.
+@return On success, returns 1.
+@return On success if there is nothing to do, returns E_NONE.
+@return On failure, returns an error code from enum failures.
+*/
+int process_params16(int argc, char *argv[], struct params16 *params);
+
+/**
+Program process automata.
+@param params Process parameters.
+@return On success, returns E_NONE.
+@return On failure, returns a error code from enum failures.
+*/
+int process16(struct params16 *params);
 
 #endif //__PROG16_H__
 

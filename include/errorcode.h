@@ -25,6 +25,29 @@ Enumerated error codes that are used by the whole framework and subsystems.
 #ifndef __ERRORCODE_H__
 #define __ERRORCODE_H__
 
+/** Enumeration of failure codes for the programming process itself. */
+enum failures {
+	/**
+		Timed out waiting for processor.
+		This usually means the MCU has no power, program jumper not in place or
+		connection failure in RS232 cable.
+	*/
+	FAIL_TIMEOUT		= 1,	/**< Timed-out waiting for MCU. */
+	FAIL_NOTBLANK		= 2,	/**< Was asked to blank check or write and the MCU was NOT blank. */
+	FAIL_ISBLANK		= 3,	/**< Was asked to blank check or read and the MCU was blank. */
+	FAIL_READ			= 4,	/**< Error reading from MCU. */
+	FAIL_WRITE			= 5,	/**< Error writing to MCU. */
+	FAIL_SRECORD		= 6,	/**< Error in S-Record either file I/O or its data. */
+	FAIL_CRC			= 7,	/**< Error in communication detected by CRC. */
+	FAIL_SERIAL			= 8,	/**< Error in serial port such as access restrictions or errors in reading or writing. */
+	FAIL_CHIPDEF		= 9,	/**< Error in 'chipdef16.ini' either reading from it or in its data. */
+	FAIL_ARGUMENT		= 10,	/**< Error in one of the arguments either missing or invalid. */
+	FAIL_INITBIROM		= 11,	/**< Error initializing Birom16 interface. */
+	FAIL_INITKERNAL		= 12,	/**< Error initializing Kernal interface. */
+	FAIL_BLANK			= 13,	/**< Error blank-checking MCU. */
+	FAIL_ERASE			= 14,	/**< Error erasing MCU. */
+};
+
 /** Generic error codes. */
 enum error_code {
 	E_NONE				=  0,	/**< Used to indicate a successful operation. */

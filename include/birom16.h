@@ -82,10 +82,11 @@ void birom16_free(struct birom16_state **state);
 /**
 	Connect to processor i.e. send BIROM16_CMD_OPEN and expect BIROM16_RESP_OK back.
 	@param state The birom16 state.
+	@param timeoutsec Time-out in seconds.
 	@return On success, returns E_NONE.
 	@return On failure, returns a negative error code.
 */
-int birom16_connect(struct birom16_state *state);
+int birom16_connect(struct birom16_state *state, uint8_t timeoutsec);
 
 /**
 	Write size number of bytes to memory address in RAM.

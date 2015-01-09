@@ -146,7 +146,7 @@ char *str_ltrim(char *str) {
 
 	// Check if there are white spaces
 	while (*str) {
-		if (!isspace(*str)) {
+		if (!isspace((int)(*str))) {
 			break;
 		}
 		str++;
@@ -168,7 +168,7 @@ char *str_rtrim(char *str) {
 
 	len = strlen(str) - 1;
 	while (*str) {
-		if (!isspace(str[len])) {
+		if (!isspace((int)str[len])) {
 			break;
 		}
 		str[len--] = '\0';
@@ -419,7 +419,18 @@ char *strtok_r(char *str, const char *delim, char **nextp) {
 }
 #endif
 
-uint8_t checksum(uint8_t *buf, int size) {
+uint8_t checksum8(uint8_t *buf, int size) {
+	uint16_t sum = 0;
+	while (size > 0) {
+		sum += *buf;
+		size--;
+		buf++;
+	}
+
+	return (sum & 0x00FF);
+}
+
+uint16_t checksum16(uint8_t *buf, int size) {
 	uint16_t sum = 0;
 	while (size > 0) {
 		sum += *buf;
@@ -491,6 +502,24 @@ long filedata(const char *path, uint8_t **buf) {
 
 	return nread;
 }
+
+#ifdef __WIN32__
+void chdir_to_exe() {
+	static char exepath[MAX_PATH];
+
+	memset(exepath, 0x00, sizeof(exepath));
+	GetModuleFileName(NULL, exepath, sizeof(exepath) - 1);
+
+	//Strip executable name from path.
+	for (int i = sizeof(exepath); i >= 0; i--) {
+		if (exepath[i] == '\\') {
+			exepath[i] = '\0';
+			break;
+		}
+	}
+	SetCurrentDirectory(exepath);
+}
+#endif //__WIN32__
 
 /** @} */
 

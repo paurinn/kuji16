@@ -172,6 +172,9 @@ int kernal16_erasechip(struct kernal16 *state, uint32_t flash_base) {
 	//Receive ACK or NAK.
 
 	int retry = 1000;
+#ifdef __WIN32__
+	int count = 1;
+#endif
 	while (retry--) {
 		rc = serial_read(state->serial, buf, 1);
 		if (rc < 0) {
@@ -191,7 +194,11 @@ int kernal16_erasechip(struct kernal16 *state, uint32_t flash_base) {
 				return E_MSGMALFORMED;
 			}
 		} else {
+#ifdef __WIN32__
+			LOGR("Erasing %d", count++);
+#else
 			LOGR("#");
+#endif
 			msleep(250);
 		}
 	}

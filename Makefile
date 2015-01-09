@@ -21,19 +21,22 @@
 AT ?= @
 
 # Attach debugging symbols and activate debug printout.
-DEBUGGING	= false
+DEBUGGING = false
 
 # Base name of the binary executable. Version numbers are appended to final binary name.
-OUTPUT		= kuji16
+OUTPUT = kuji16
+
+# Build graphical user interface on platforms that support it.
+GUI = true
 
 # Any platform neutral options to the compiler.
 # Platform specific stuff is in makefile.$(shell uname -s).
-CFLAGS		= -Wall -Wextra -Werror -Wfatal-errors -Wno-unused-parameter -Wno-unused-variable --std=gnu99 -I./include -DCONSOLE
+CFLAGS = -Wall -Wextra -Werror -Wfatal-errors -Wno-unused-parameter -Wno-unused-variable --std=gnu99 -I./include
 
 # Any platform neutral options to the linker.
-#LDFLAGS	=
+#LDFLAGS =
 
-#RULES		+= <rules_list>		# List of make rules to run but after the default.
+#RULES += <rules_list>		# List of make rules to run but after the default.
 
 #AFTER_INSTALL	+= <shell commands> # Command line to execute as the last step in the install directive.
 
@@ -48,10 +51,9 @@ SRCS =	\
 		srec.c \
 		prog16.c \
 		birom16.c \
-		kernal16.c \
-		main16.c
+		kernal16.c
 
-#############################################################################
+###############################################################################
 
 #Version is stored in the file VERSION.
 MAJOR	= $(shell sed -n '1p' VERSION | cut -d= -f2)
@@ -59,12 +61,12 @@ MINOR	= $(shell sed -n '2p' VERSION | cut -d= -f2)
 BUILD	= $(shell sed -n '3p' VERSION | cut -d= -f2)
 COMPANY	= $(shell sed -n '4p' VERSION | cut -d= -f2)
 
-SVNREVISION = $(shell svn info 2>/dev/null | grep '^Revision' | sed -e 's/Revision: *//')
-ifeq "$(SVNREVISION)" ""
-SVNREVISION = 0
+REVISION = $(shell svn info 2>/dev/null | grep '^Revision' | sed -e 's/Revision: *//')
+ifeq "$(REVISION)" ""
+REVISION = 0
 endif
 
-CFLAGS += -DREVISION=$(SVNREVISION) -DBUILD_TIMESTAMP=$(shell date '+%s') -DMAJORVERSION=$(MAJOR) -DMINORVERSION=$(MINOR) -DBUILD=$(BUILD)
+CFLAGS += -DREVISION=$(REVISION) -DBUILD_TIMESTAMP=$(shell date '+%s') -DMAJORVERSION=$(MAJOR) -DMINORVERSION=$(MINOR) -DBUILD=$(BUILD)
 
 # Select debugging or optimized compiler flags.
 ifeq ($(DEBUGGING), true)
@@ -73,6 +75,8 @@ else
 CFLAGS += -O3
 endif
 
+RCOBJ = kuji16_rc.o
+
 INSTALLDIR = $(PREFIX)/bin
 
 #Stage directory is used to build a zip package of the final binary + documentation.
@@ -80,17 +84,18 @@ INSTALLDIR = $(PREFIX)/bin
 STAGEDIR = $(OUTPUT)_stage
 
 #Name of zipped file with executable and documentation.
-ZIPOUT = $(OUTPUT).$(MAJOR).$(MINOR).zip
+ZIPOUT = $(OUTPUT).$(MAJOR).$(MINOR).$(BUILD).zip
 
-CLEANFILES += $(OUTPUT)$(EXT) *.core gmon.out $(OBJS) $(OUTPUT).sha1 $(EXTRACLEAN) doc/*.tmp *.tmp
+CLEANFILES += $(OUTPUT)$(EXT) *.core gmon.out $(OBJS) $(OUTPUT).sha1 $(EXTRACLEAN) doc/*.tmp *.tmp $(RCOBJ)
 MRPROPERFILES += $(CLEANFILES) doc/latex *.log
-DISTCLEANFILES += $(MRPROPERFILES) html $(STAGEDIR) $(ZIPOUT) kernal16/m_flash.* chipdef16.ini
+DISTCLEANFILES += $(MRPROPERFILES) html $(STAGEDIR) $(ZIPOUT)
 
-STAGEFILES += $(OUTPUT)$(EXT) html LICENSE README VERSION doc *.c include Makefile makefile.* buildcounter.lua
+STAGEFILES += $(OUTPUT)$(EXT) kernal16/ chipdef16.ini LICENSE README
 
 #Include system specific Makefile. This is based on kernel name from 'uname -s'.
 #The basic declarations can be overwritten to suit each system.
 KERNEL=$(shell uname -s)
+#KERNEL=MINGW32_NT-6.1
 TOP := $(dir $(lastword $(MAKEFILE_LIST)))
 include $(TOP)/makefile.$(KERNEL)
 
@@ -107,6 +112,11 @@ all: $(RULES)
 .c.o:
 	$(ECHO) "[COMPILE] $@"
 	$(AT)$(CC) $(CFLAGS) -c -o $*.o $<
+
+#Special target for compiled windows resource file.
+$(RCOBJ): $(RCFILE)
+	$(ECHO) "[$(FG_CYAN)WINDRES$(NORMAL)] $(RCFILE) > $(RCOBJ)"
+	$(AT)$(RESCC) $(RESCFLAGS) $(RCFILE) $(RCOBJ)
 
 $(OUTPUT)$(EXT): $(OBJS)
 	$(ECHO) "[LINKING] $(OUTPUT)$(EXT)"
@@ -132,7 +142,7 @@ mrproper:
 	$(AT)$(RM) -rf $(MRPROPERFILES)
 
 buildcounter:
-	$(AT)./buildcounter.lua
+	$(AT)lua buildcounter.lua
 
 distclean:
 	$(ECHO) "[DISTCLEAN] $(DISTCLEANFILES)"
@@ -141,7 +151,7 @@ distclean:
 cloc:
 	cloc .
 
-dist: distclean buildcounter cloc $(RCOBJ) $(OUTPUT)$(EXT) doc
+dist: distclean buildcounter $(RCOBJ) $(OUTPUT)$(EXT)
 	$(AT)mkdir -p $(STAGEDIR)
 	$(AT)$(CP) -r $(STAGEFILES) $(STAGEDIR)
 	$(ECHO) "[ZIP] $(STAGEFILES) > $(ZIPOUT)"
@@ -152,5 +162,5 @@ prep:
 	$(AT)$(CP) /c/Program\ Files\ \(x86\)/FUJITSU/FUJITSU\ FLASH\ MCU\ Programmer/FMC16LX/CHIPDEF.INI chipdef16.ini
 
 help:
-	$(AT)$(CAT) readme.txt
+	$(AT)$(CAT) README
 

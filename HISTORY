@@ -13,3 +13,12 @@ v1.3 - KS - 20140328
 v1.4 - KS - 20140409
 	Fixed Linux version.
 	Relaxed timings to work with USB->RS232 converter, works with Prolific generic dongle.
+
+v1.5 - KS - 20140411
+	Print out error (was debug) when time-out probing for birom.
+
+v1.6 - KS - 20140422
+	Fixed '-t' parameter.
+
+v1.7 - KS - 20150109
+	Added win32 GUI, works well with Wine and compiles properly using either Mingw or Cygwin.

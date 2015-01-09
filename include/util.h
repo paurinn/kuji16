@@ -319,12 +319,20 @@ char *strtok_r(char *str, const char *delim, char **nextp);
 #endif
 
 /**
-Simple checksum. Returns accumulated bytes values.
+Simple 8 bit checksum. Returns accumulated bytes values.
 @param buf The buffer to accumulate.
 @param len Total number of bytes in buf[].
 @return Returns the lowest 8 bits of sum.
 */
-uint8_t checksum(uint8_t *buf, int len);
+uint8_t checksum8(uint8_t *buf, int size);
+
+/**
+Simple 16 bit checksum. Returns accumulated bytes values.
+@param buf The buffer to accumulate.
+@param len Total number of bytes in buf[].
+@return Returns the lowest 8 bits of sum.
+*/
+uint16_t checksum16(uint8_t *buf, int size);
 
 /**
 	Calculate CRC16 value from buf[0] to buf[len-1].

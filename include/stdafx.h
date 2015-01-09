@@ -36,10 +36,12 @@ or project specific include files that are used frequently, but are changed infr
 
 // Windows Header Files:
 #include <windows.h>
+#include <windowsx.h>
 
 #endif //__WIN32__
 
 // C RunTime Header Files
+#include <stdbool.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <float.h>
@@ -54,7 +56,6 @@ or project specific include files that are used frequently, but are changed infr
 #include <strings.h>
 #include <stdarg.h>
 #include <stdint.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
@@ -63,7 +64,6 @@ or project specific include files that are used frequently, but are changed infr
 #include <ctype.h>
 #include <math.h>
 #include <signal.h>
-#include <libintl.h>
 #include <fcntl.h>
 
 #ifndef __WIN32__

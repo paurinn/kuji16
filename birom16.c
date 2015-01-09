@@ -60,7 +60,7 @@ void birom16_free(struct birom16_state **state) {
 	}
 }
 
-int birom16_connect(struct birom16_state *state) {
+int birom16_connect(struct birom16_state *state, uint8_t timeoutsec) {
 	int rc;
 	uint8_t buf[2];
 
@@ -68,7 +68,7 @@ int birom16_connect(struct birom16_state *state) {
 
 	memset(&buf, 0x00, sizeof(buf));
 
-	double timeout = get_ticks() + 10;
+	double timeout = get_ticks() + timeoutsec;
 	while (get_ticks() < timeout) {
 		msleep(10);
 
@@ -99,7 +99,7 @@ int birom16_connect(struct birom16_state *state) {
 		}
 	}
 
-	LOGD("ERROR - Time-out waiting for MCU.");
+	LOGE("ERROR - Time-out waiting for MCU.");
 	return E_TIMEOUT;
 }
 
@@ -118,7 +118,7 @@ int birom16_write(struct birom16_state *state, uint16_t address, uint8_t *data, 
 	memcpy(buffer + 5, data, size);
 	size += 5;
 
-	uint8_t csum = checksum(buffer, size);
+	uint8_t csum = checksum8(buffer, size);
 	buffer[size++] = csum;
 
 	LOGD("Writing %d bytes to address 0x%04X...", size, address);
