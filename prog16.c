@@ -475,7 +475,7 @@ Usage: ./kuji16 -m<mcu> -p<com> [-c<freq>] [-r<file>] [-e] [-v<verbosity>] [-d] 
   -p<com>    Set com port Id from 1-99 on Windows or com port device e.g. '/dev/ttyS0' on Linux.\n\
   -m<mcu>    Select MCU by name e.g. 'mb90f598g'. Case-insensitive.\n\
   -c<freq>   Select target crystal (megahertz) e.g 4, 8, 16 etc. Default is 4 Mhz.\n\
-  -t<sec>    Probing timeout in seconds.\n\
+  -t<sec>   Select discovery timeout in seconds. Default is 15 seconds.\n\
   -b         Blank-check and exit immediately after.\n\
   -r<file>   Read MCU flash and write it as S-Records to file.\n\
   -e         Erase MCU flash.\n\
@@ -643,8 +643,8 @@ int process_params16(int argc, char *argv[], struct params16 *params) {
 	}
 
 	if (params->timeoutsec < 1 || params->timeoutsec > 60) {
-		if (params->timeoutsec != 0) LOGW("Invalid timeout, setting default 5 seconds.");
-		params->timeoutsec = 5;
+		if (params->timeoutsec != 0) LOGW("Invalid timeout, setting default 15 seconds.");
+		params->timeoutsec = 15;
 	}
 
 	if (params->chip == NULL) {

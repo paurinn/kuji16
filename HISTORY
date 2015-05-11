@@ -22,3 +22,7 @@ v1.6 - KS - 20140422
 
 v1.7 - KS - 20150109
 	Added win32 GUI, works well with Wine and compiles properly using either Mingw or Cygwin.
+
+v1.8 - KS - 20150511
+	Added a compile switch to build a version where reading flash from chip is inhibited
+	unless a command line switch 'enablereading' is supplied.

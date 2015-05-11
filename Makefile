@@ -14,7 +14,7 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Master Makefile.
+###############################################################################
 
 #To get a fully verbose make output do declare 'AT' at the command line like so: 'make AT='.
 #By default AT is undefined and thus assigned the string '@'.
@@ -28,6 +28,10 @@ OUTPUT = kuji16
 
 # Build graphical user interface on platforms that support it.
 GUI = true
+
+# Build a version where reading is inhibited unless uer
+# supplies command line argument "pleaseenablereading".
+READINGINHIBITED = true
 
 # Any platform neutral options to the compiler.
 # Platform specific stuff is in makefile.$(shell uname -s).
@@ -75,6 +79,11 @@ else
 CFLAGS += -O3
 endif
 
+# Set reading inhibit mambo.
+ifeq ($(READINGINHIBITED), true)
+CFLAGS += -DREADINGINHIBITED
+endif
+
 RCOBJ = kuji16_rc.o
 
 INSTALLDIR = $(PREFIX)/bin
@@ -90,14 +99,14 @@ CLEANFILES += $(OUTPUT)$(EXT) *.core gmon.out $(OBJS) $(OUTPUT).sha1 $(EXTRACLEA
 MRPROPERFILES += $(CLEANFILES) doc/latex *.log
 DISTCLEANFILES += $(MRPROPERFILES) html $(STAGEDIR) $(ZIPOUT)
 
-STAGEFILES += $(OUTPUT)$(EXT) kernal16/ chipdef16.ini LICENSE README
+STAGEFILES += $(OUTPUT)$(EXT) kernal16/ chipdef16.ini LICENSE README HISTORY
 
 #Include system specific Makefile. This is based on kernel name from 'uname -s'.
 #The basic declarations can be overwritten to suit each system.
-KERNEL=$(shell uname -s)
-#KERNEL=MINGW32_NT-6.1
+#You can override this on the command line: `make PLAT=MINGW32_NT-6.1`.
+PLAT?=$(shell uname -s)
 TOP := $(dir $(lastword $(MAKEFILE_LIST)))
-include $(TOP)/makefile.$(KERNEL)
+include $(TOP)/makefile.$(PLAT)
 
 ### Rules
 .SUFFIXES : .c .o
@@ -141,6 +150,9 @@ mrproper:
 	$(ECHO) "[MRPROPER] $(MRPROPERFILES)"
 	$(AT)$(RM) -rf $(MRPROPERFILES)
 
+cloc:
+	$(AT)cloc .
+
 buildcounter:
 	$(AT)lua buildcounter.lua
 
@@ -148,10 +160,7 @@ distclean:
 	$(ECHO) "[DISTCLEAN] $(DISTCLEANFILES)"
 	$(AT)$(RM) -rf $(DISTCLEANFILES)
 
-cloc:
-	cloc .
-
-dist: distclean buildcounter $(RCOBJ) $(OUTPUT)$(EXT)
+dist: distclean $(RCOBJ) $(OUTPUT)$(EXT)
 	$(AT)mkdir -p $(STAGEDIR)
 	$(AT)$(CP) -r $(STAGEFILES) $(STAGEDIR)
 	$(ECHO) "[ZIP] $(STAGEFILES) > $(ZIPOUT)"
