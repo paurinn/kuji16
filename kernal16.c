@@ -1,6 +1,6 @@
 /*
 Kuji16 Flash MCU Programmer
-Copyright (C) 2014 Kari Sigurjonsson
+Copyright (C) 2014-2016 Kari Sigurjonsson
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ int kernal16_new(struct kernal16 **state, struct chipdef16 *chip, struct serial 
 	(*state)->chip = chip;
 	(*state)->serial = serial;
 
-	LOGD("User says MCU is '%s' on %s.", mcu16_name(chip->mcu), serial->address);
+	LOGD("User says MCU is '%s' on %s.", chip->name, serial->address);
 
 	return E_NONE;
 }
@@ -195,7 +195,8 @@ int kernal16_erasechip(struct kernal16 *state, uint32_t flash_base) {
 			}
 		} else {
 #ifdef __WIN32__
-			LOGR("Erasing %d", count++);
+			//LOGR("Erasing %d", count++);
+			LOGR("!! DO NOT UNPLUG POWER !!\nErasing %d", count++);
 #else
 			LOGR("#");
 #endif

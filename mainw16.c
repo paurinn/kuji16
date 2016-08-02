@@ -1,6 +1,6 @@
 /*
 Kuji16 Flash MCU Programmer
-Copyright (C) 2014 Kari Sigurjonsson
+Copyright (C) 2014-2016 Kari Sigurjonsson
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -41,7 +41,6 @@ char readingenabled = 0;
 //For app name and version.
 char windowtitle[256];
 
-extern struct mcu16_tag mcu16_map[];
 extern struct chipdef16 chipdefs[MAX_MCU16_TYPE];
 
 DWORD WINAPI ProcessThread( LPVOID lpParam );
@@ -63,6 +62,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		MessageBox(NULL, "Error processing 'chipdef16.ini'", "Fatal Error", MB_OK);
 		return 1;
 	}
+
+	validate_mcu16_chipdef16();
 
 	WNDCLASS wc = {
 		.lpfnWndProc	= WndProc,
@@ -177,11 +178,11 @@ INT_PTR CALLBACK DlgProgProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 		int i;
 		HWND child = GetDlgItem(hwndDlg, IDC_CBXMCU);
-		for (i = 1; mcu16_map[i].name; i++) {
-			ComboBox_AddString(child, mcu16_map[i].name);
+		for (i = 0; i < MAX_MCU16_TYPE && chipdefs[i].name[0]; i++) {
+			ComboBox_AddString(child, chipdefs[i].name);
 		}
-		ComboBox_SetCurSel(child, 174);
-		params.chip = &chipdefs[mcu16_map[ComboBox_GetCurSel(GetDlgItem(hwndDlg, IDC_CBXMCU))+1].type];
+		ComboBox_SetCurSel(child, find_mcu16_by_name("MB90F598/G"));
+		params.chip = &chipdefs[ComboBox_GetCurSel(GetDlgItem(hwndDlg, IDC_CBXMCU))];
 
 		child = GetDlgItem(hwndDlg, IDC_CBXPORT);
 		for (i = 1; i < 100; i++) {
@@ -224,7 +225,7 @@ INT_PTR CALLBACK DlgProgProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 	case WM_COMMAND:
 		switch(LOWORD(wParam)) {
 		case IDC_CBXMCU:
-			params.chip = &chipdefs[mcu16_map[ComboBox_GetCurSel(GetDlgItem(hwndDlg, IDC_CBXMCU))+1].type];
+			params.chip = &chipdefs[ComboBox_GetCurSel(GetDlgItem(hwndDlg, IDC_CBXMCU))];
 			break;
 		case IDC_CBXPORT:
 			snprintf(compath, sizeof(compath)-1, "%d", ComboBox_GetCurSel(GetDlgItem(hwndDlg, IDC_CBXPORT))+1);
@@ -242,14 +243,13 @@ INT_PTR CALLBACK DlgProgProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 			break;
 		case IDC_BTNGO:
 			{
-			if (busy) {
-				MessageBox(NULL, "Already working on it!", "y0", MB_OK);
-				break;
-			}
-			/*
-				int id = ComboBox_GetCurSel(GetDlgItem(hwndDlg, IDC_CBXMCU));
-				params.chip = &chipdefs[id];
-			*/
+				if (busy) {
+					MessageBox(NULL, "Already working on it!", "y0", MB_OK);
+					break;
+				}
+
+				busy = 1;
+
 				SYSTEMTIME t;
 				GetLocalTime(&t);
 				snprintf(savefilename, sizeof(savefilename)-1,
@@ -261,9 +261,7 @@ INT_PTR CALLBACK DlgProgProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 					t.wMinute,
 					t.wSecond
 				);
-				busy = 1;
 				CreateThread(NULL, 0, ProcessThread, &params, 0, NULL);
-				//process16(&params);
 			}
 			break;
 		case IDC_BTNSELSOURCE:

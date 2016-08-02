@@ -2,7 +2,7 @@
 @mainpage
 
 <h3>Kuji16 Flash MCU Programmer</h3>
-Copyright (C) 2014 Kari Sigurjonsson
+Copyright (C) 2014-2016 Kari Sigurjonsson
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -185,110 +185,9 @@ Do it all in one step:
 #ifndef __PROG16_H__
 #define __PROG16_H__
 
-/**
-	Enumeration of 16 bit Fujitsu MCU types.
-*/
-enum mcu16_type {
-	MCU16_INVALID = 0x00,	/**< Not a valid MCU Id. Do not remove. */
-	MCU16_MB90F334,
-	MCU16_MB90F335A,
-	MCU16_MB90F337,
-	MCU16_MB90F342A,
-	MCU16_MB90F342E,
-	MCU16_MB90F345A,
-	MCU16_MB90F345E,
-	MCU16_MB90F346A,
-	MCU16_MB90F346E,
-	MCU16_MB90F347A,
-	MCU16_MB90F347E,
-	MCU16_MB90F349A,
-	MCU16_MB90F349E,
-	MCU16_MB90F351S,
-	MCU16_MB90F351B,
-	MCU16_MB90F351A,
-	MCU16_MB90F351E,
-	MCU16_MB90F352S,
-	MCU16_MB90F352B,
-	MCU16_MB90F352A,
-	MCU16_MB90F352E,
-	MCU16_MB90F357A,
-	MCU16_MB90F357E,
-	MCU16_MB90F362E,
-	MCU16_MB90F367E,
-	MCU16_MB90F372,
-	MCU16_MB90F378,
-	MCU16_MB90F387S,
-	MCU16_MB90F394H,
-	MCU16_MB90F395H,
-	MCU16_MB90MF408,
-	MCU16_MB90F423G,
-	MCU16_MB90F428G,
-	MCU16_MB90F438L,
-	MCU16_MB90F439S,
-	MCU16_MB90F443G,
-	MCU16_MB90F455S,
-	MCU16_MB90F456S,
-	MCU16_MB90F457S,
-	MCU16_MB90F462,
-	MCU16_MB90F474H,
-	MCU16_MB90F476A,
-	MCU16_MB90F481,
-	MCU16_MB90F482,
-	MCU16_MB90F488,
-	MCU16_MB90F489,
-	MCU16_MB90F497G,
-	MCU16_MB90F498G,
-	MCU16_MB90F523B,
-	MCU16_MB90F543G,
-	MCU16_MB90F546G,
-	MCU16_MB90F548G,
-	MCU16_MB90F549G,
-	MCU16_MB90F553A,
-	MCU16_MB90F562B,
-	MCU16_MB90F568,
-	MCU16_MB90F574A,
-	MCU16_MB90F583B,
-	MCU16_MB90F584C,
-	MCU16_MB90F591A,
-	MCU16_MB90F594A,
-	MCU16_MB90F598G,
-	MCU16_MB90F654A,
-	MCU16_MB90F803,
-	MCU16_MB90F804,
-	MCU16_MB90F822,
-	MCU16_MB90F823,
-	MCU16_MB90F828B,
-	MCU16_MB90F867A,
-	MCU16_MB90F867E,
-	MCU16_MB90F882,
-	MCU16_MB90F883A,
-	MCU16_MB90F883C,
-	MCU16_MB90F884A,
-	MCU16_MB90F897S,
-	MCU16_MB90F912,
-	MCU16_MB90F922,
-	MCU16_MB90F923,
-	MCU16_MB90F924,
-	MCU16_MB90F946A,
-	MCU16_MB90F947A,
-	MCU16_MB90F949A,
-	MCU16_MB90F952,
-	MCU16_MB90F962,
-	MCU16_MB90F983,
-	MCU16_MB90F931S,
-	MCU16_MB90F997,
-	//--
-	MAX_MCU16_TYPE		/**< Sentinel. */
+enum {
+	MAX_MCU16_TYPE	= 256
 };
-
-/** MCU nametag. */
-struct mcu16_tag {
-	char *name;				/**< MCU name as single word. */
-	enum mcu16_type type;	/**< MCU type Id. */
-};
-
-/** Array of MCU names and associated type identifiers. */
-extern struct mcu16_tag mcu16_map[];
 
 /** Enumeration of supported crystal frequencies. */
 enum frequency {
@@ -336,7 +235,7 @@ enum bps {
 
 /** Configuration of a 16 bit MCU. */
 struct chipdef16 {
-	enum mcu16_type mcu;				/**< Tell what MCU this entry is for. */
+//	enum mcu16_type mcu;				/**< Tell what MCU this entry is for. */
 	char name[256];						/**< Common name of MCU. */
 	char kernal[256];					/**< Base name of the kernal file aka stage 2 boot loader. */
 	enum frequency clock[N_FREQUENCY];	/**< Array of valid crystal frequencies when stage 1 is running. */
@@ -348,37 +247,7 @@ struct chipdef16 {
 	uint32_t flash_size;				/**< Flash size (flash_end - flash_start). 24 bit range. */
 };
 
-/**
-	Holds configuration for each 16 bit MCU type.
-	This array is initialized with data from 'chipdef16.ini'.
-*/
-extern struct chipdef16 chipdefs[MAX_MCU16_TYPE];
-
-/**
-This mambo processes 'chipdef16.ini' file that describes each supported processor.
-The global array chipdefs[] receives the processed data.
-@return On success, returns E_NONE.
-@return On failure, returns a negative error code.
-*/
-int process_chipdef16();
-
-/**
-	Find MCU type by name.
-	@param s MCU name.
-	@return On success, returns the MCU identifier.
-	@return On failure i.e. no such MCU, returns a negative error code.
-*/
-int find_mcu16_by_name(char *s);
-
-/**
-	Look up common MCU name given a type identifier.
-	@param type MCU type identifier.
-	@return On success, returns the name.
-	@return On failure i.e. invalid type, returns NULL.
-*/
-const char *mcu16_name(enum mcu16_type type);
-
-/** This structure contains the results of command line argument parser. */
+/** Structure for parsed command line arguments. */
 struct params16 {
 	char *argstr;			/**< Control string for getopt(). */
 	char *srecpath;			/**< Parameter given to '-w'. */
@@ -396,6 +265,35 @@ struct params16 {
 	struct chipdef16 *chip;	/**< MCU descriptor. */
 	int freqid;				/**< Index into chip->clock[], chip->bps[] and chip->bps2[]. */
 };
+
+/**
+	Holds configuration for each 16 bit MCU type.
+	This array is initialized with data from 'chipdef16.ini'.
+*/
+extern struct chipdef16 chipdefs[MAX_MCU16_TYPE];
+
+/**
+This mambo processes 'chipdef16.ini' file that describes each supported processor.
+The global array chipdefs[] receives the processed data.
+@return On success, returns E_NONE.
+@return On failure, returns a negative error code.
+*/
+int process_chipdef16();
+
+/**
+Make sure entries in chipdefs[] have valid baud rate and such.
+@return On success i.e. all entires valid, returns E_NONE.
+@return On failure, returns a negative error code.
+*/
+int validate_mcu16_chipdef16();
+
+/**
+	Find MCU type by name.
+	@param s MCU name.
+	@return On success, returns the MCU index in chipdefs[].
+	@return On failure i.e. no such MCU, returns a negative error code.
+*/
+int find_mcu16_by_name(char *s);
 
 /**
 Process parameters.

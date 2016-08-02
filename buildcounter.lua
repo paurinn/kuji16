@@ -2,7 +2,7 @@
 
 --[[
 Kuji16 Flash MCU Programmer
-Copyright (C) 2014 Kari Sigurjonsson
+Copyright (C) 2014-2016 Kari Sigurjonsson
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

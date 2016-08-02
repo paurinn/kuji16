@@ -20,5 +20,6 @@
 #define IDC_LBLSTATUS							111
 #define IDC_CBXMCU								112
 #define IDC_CBXPORT								113
+#define IDC_BTNHELP								114
 
 #endif	//__RESOURCE_H__

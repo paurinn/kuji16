@@ -26,3 +26,8 @@ v1.7 - KS - 20150109
 v1.8 - KS - 20150511
 	Added a compile switch to build a version where reading flash from chip is inhibited
 	unless a command line switch 'enablereading' is supplied.
+
+v1.9 - KS - 20160802
+	Removed the hardcoded list of MCUs, use data solely from 'chipdef16.ini'.
+	Added delay before erasing MCU to prevent accidents such as watchdog tripping during erasure.
+	Added warning that removing power during erasure will end in a bad time.

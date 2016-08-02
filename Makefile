@@ -1,5 +1,5 @@
 #Kuji16 Flash MCU Programmer
-#Copyright (C) 2014 Kari Sigurjonsson
+#Copyright (C) 2014-2016 Kari Sigurjonsson
 
 #This program is free software: you can redistribute it and/or modify
 #it under the terms of the GNU General Public License as published by
@@ -104,7 +104,8 @@ STAGEFILES += $(OUTPUT)$(EXT) kernal16/ chipdef16.ini LICENSE README HISTORY
 #Include system specific Makefile. This is based on kernel name from 'uname -s'.
 #The basic declarations can be overwritten to suit each system.
 #You can override this on the command line: `make PLAT=MINGW32_NT-6.1`.
-PLAT?=$(shell uname -s)
+#PLAT?=$(shell uname -s)
+PLAT=MINGW32_NT-6.1
 TOP := $(dir $(lastword $(MAKEFILE_LIST)))
 include $(TOP)/makefile.$(PLAT)
 
@@ -127,7 +128,7 @@ $(RCOBJ): $(RCFILE)
 	$(ECHO) "[$(FG_CYAN)WINDRES$(NORMAL)] $(RCFILE) > $(RCOBJ)"
 	$(AT)$(RESCC) $(RESCFLAGS) $(RCFILE) $(RCOBJ)
 
-$(OUTPUT)$(EXT): $(OBJS)
+$(OUTPUT)$(EXT): $(RCOBJ) $(OBJS)
 	$(ECHO) "[LINKING] $(OUTPUT)$(EXT)"
 	$(AT)$(LD) $(OBJS) $(LDFLAGS) -o $(OUTPUT)$(EXT)
 

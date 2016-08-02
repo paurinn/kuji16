@@ -1,6 +1,6 @@
 /*
 Kuji16 Flash MCU Programmer
-Copyright (C) 2014 Kari Sigurjonsson
+Copyright (C) 2014-2016 Kari Sigurjonsson
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ int birom16_new(struct birom16_state **state, struct chipdef16 *chip, struct ser
 	(*state)->chip = chip;
 	(*state)->serial = serial;
 
-	LOGD("User says MCU is '%s' on '%s'.", mcu16_name(chip->mcu), serial->address);
+	LOGD("User says MCU is '%s' on '%s'.", chip->name, serial->address);
 
 	memset(path, 0x00, sizeof(path));
 	snprintf(path, sizeof(path) - 1, "kernal16/%s", chip->kernal);
@@ -63,6 +63,7 @@ void birom16_free(struct birom16_state **state) {
 int birom16_connect(struct birom16_state *state, uint8_t timeoutsec) {
 	int rc;
 	uint8_t buf[2];
+	int tally = 0;
 
 	serial_purge(state->serial);
 
@@ -70,7 +71,12 @@ int birom16_connect(struct birom16_state *state, uint8_t timeoutsec) {
 
 	double timeout = get_ticks() + timeoutsec;
 	while (get_ticks() < timeout) {
-		msleep(10);
+		msleep(100);
+
+		if ((tally % 10) == 0) {
+			LOGI("Probing for MCU %.0f...", ceil(timeout - get_ticks()));
+
+		}
 
 		buf[0] = BIROM16_CMD_PROBE;
 		rc = serial_write(state->serial, buf, 1);
