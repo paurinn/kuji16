@@ -99,7 +99,7 @@ int process_chipdef16() {
 			++id;
 
 			strncpy(chipdefs[id].name, s, sizeof(chipdefs[id].name) - 1);
-			LOGD("Processing [%s]", chipdefs[id].name);
+			//LOGD("Processing [%s]", chipdefs[id].name);
 		} else {
 			if (id >= 0) {
 				if (sscanf(s, "%[^=]=%s", key, value) < 2) {
@@ -538,6 +538,11 @@ int process16(struct params16 *params) {
 		return FAIL_TIMEOUT;
 	}
 
+	LOGI("Writing KERNAL to iRAM...");
+
+	//Relax guy.
+	msleep(500);
+
 	//Dump stage 2 binary into MCU RAM.
 	rc = birom16_write(birom, params->chip->address_load, birom->kernaldata, birom->kernalsize);
 	if (rc != E_NONE) {
@@ -546,6 +551,9 @@ int process16(struct params16 *params) {
 		return FAIL_WRITE;
 	}
 
+	//Relax guy.
+	msleep(500);
+
 	//Check if birom is still there.
 	rc = birom16_connect(birom, params->timeoutsec);
 	if (rc != E_NONE) {
@@ -553,6 +561,11 @@ int process16(struct params16 *params) {
 		serial_close(&serial);
 		return FAIL_TIMEOUT;
 	}
+
+	LOGI("Booting KERNAL in iRAM...");
+
+	//Relax guy.
+	msleep(500);
 
 	// Call stage 1 and transfer control to stage 2 kernal16.
 	rc = birom16_call(birom, params->chip->address_load);
@@ -565,6 +578,9 @@ int process16(struct params16 *params) {
 	birom16_free(&birom);
 
 	LOGD("---------- BIROM16 DONE ----------\n");
+
+	//Relax guy.
+	msleep(500);
 
 	//Adjust baudrate to suit stage 2.
 	rc = serial_setbaud(&serial, params->chip->bps2[params->freqid] > 0 ? params->chip->bps2[params->freqid] : 9600);
@@ -599,6 +615,11 @@ int process16(struct params16 *params) {
 		return FAIL_TIMEOUT;
 	}
 
+	LOGI("Blank checking...");
+
+	//Relax guy.
+	msleep(500);
+
 	//Always blank-check.
 	rc = kernal16_blankcheck(kernal, params->chip->flash_start);
 	if (rc < 0) {
@@ -608,6 +629,9 @@ int process16(struct params16 *params) {
 		return FAIL_BLANK;
 	}
 	isblank = (rc == 1);
+
+	//Relax guy.
+	msleep(500);
 
 	//Exit early if chip is full and there are no operations or
 	//if chip is empty and operations would not be possible.
@@ -624,6 +648,9 @@ int process16(struct params16 *params) {
 		serial_close(&serial);
 		return isblank ? FAIL_ISBLANK : FAIL_NOTBLANK;
 	}
+
+	//Relax guy.
+	msleep(500);
 
 	//Read flash contents
 	if (params->read) {
@@ -683,6 +710,9 @@ int process16(struct params16 *params) {
 		LOGI("== Chip Read Successfully ==");
 	}
 
+	//Relax guy.
+	msleep(500);
+
 	//Return early is chip is full and trying to write without erasing first.
 	if (!isblank && params->write && !params->erase) {
 		LOGE("Error: Trying to write into an already full MCU. Did you forget to add '-e' argument?");
@@ -691,6 +721,9 @@ int process16(struct params16 *params) {
 		serial_close(&serial);
 		return FAIL_NOTBLANK;
 	}
+
+	//Relax guy.
+	msleep(500);
 
 	//Erase chip.
 	if (params->erase && !isblank) {
@@ -714,6 +747,9 @@ int process16(struct params16 *params) {
 		LOGR("\n");
 		LOGI("== Chip Erased ==");
 	}
+
+	//Relax guy.
+	msleep(500);
 
 	//Program S-Record.
 	if (params->write) {

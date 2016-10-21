@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "stdafx.h"
 
-#ifdef __WIN32__
+#if defined(GUI) && defined(__WIN32__)
 #include "resource.h"
 #endif
 
@@ -139,7 +139,7 @@ int logg(enum logg_type type, const char *fmt, ...) {
 	fwrite(obuf, n, 1, flogg);
 	fflush(flogg);
 
-#ifdef __WIN32__
+#if defined(GUI) && defined(__WIN32__)
 	{
 		extern HWND hwndDlg;
 		HWND w = GetDlgItem(hwndDlg, IDC_LBLSTATUS);
@@ -183,7 +183,7 @@ int loggr(const char *fmt, ...) {
 	fwrite(obuf, n, 1, flogg);
 	fflush(flogg);
 
-#ifdef __WIN32__
+#if defined(GUI) && defined(__WIN32__)
 	{
 		extern HWND hwndDlg;
 		HWND w = GetDlgItem(hwndDlg, IDC_LBLSTATUS);

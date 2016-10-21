@@ -46,6 +46,7 @@ void kernal16_free(struct kernal16 **state) {
 int kernal16_intro(struct kernal16 *state) {
 	uint8_t buf[10];
 	int rc;
+	int tally = 0;
 
 	memset(buf, 0x00, sizeof(buf));
 
@@ -63,6 +64,13 @@ int kernal16_intro(struct kernal16 *state) {
 		}
 
 		serial_drain(state->serial);
+
+		msleep(100);
+
+		if ((tally % 10) == 0) {
+			LOGI("Probing for KERNAL %.0f...", ceil(timeout - get_ticks()));
+		}
+		++tally;
 
 		memset(&buf, 0x00, sizeof(buf));
 		while ((rc = serial_read(state->serial, buf, 1)) > 0) {
@@ -171,7 +179,7 @@ int kernal16_erasechip(struct kernal16 *state, uint32_t flash_base) {
 
 	//Receive ACK or NAK.
 
-	int retry = 1000;
+	int retry = 60;
 #ifdef __WIN32__
 	int count = 1;
 #endif

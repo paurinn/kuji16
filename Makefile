@@ -79,6 +79,10 @@ else
 CFLAGS += -O3
 endif
 
+ifeq ($(GUI), true)
+CFLAGS += -DGUI
+endif
+
 # Set reading inhibit mambo.
 ifeq ($(READINGINHIBITED), true)
 CFLAGS += -DREADINGINHIBITED

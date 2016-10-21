@@ -73,11 +73,6 @@ int birom16_connect(struct birom16_state *state, uint8_t timeoutsec) {
 	while (get_ticks() < timeout) {
 		msleep(100);
 
-		if ((tally % 10) == 0) {
-			LOGI("Probing for MCU %.0f...", ceil(timeout - get_ticks()));
-
-		}
-
 		buf[0] = BIROM16_CMD_PROBE;
 		rc = serial_write(state->serial, buf, 1);
 		if (rc < 1) {
@@ -86,6 +81,13 @@ int birom16_connect(struct birom16_state *state, uint8_t timeoutsec) {
 		}
 
 		serial_drain(state->serial);
+
+		msleep(100);
+
+		if ((tally % 10) == 0) {
+			LOGI("Probing for BIROM %.0f...", ceil(timeout - get_ticks()));
+		}
+		++tally;
 
 		memset(&buf, 0x00, sizeof(buf));
 		while ((rc = serial_read(state->serial, buf, 1)) > 0) {
